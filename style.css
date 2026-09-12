@@ -1,0 +1,335 @@
+/* 모든 요소의 크기를 계산하는 기본 방식을 통일 */
+* {
+  box-sizing: border-box;
+}
+
+/* 웹페이지 전체 */
+body {
+  margin: 0;
+  min-height: 100vh;
+  background-color: #080a0f;
+  color: #ffffff;
+  font-family: Arial, sans-serif;
+}
+
+/* 앱 전체 영역 */
+.app {
+  width: 100%;
+  max-width: 430px;
+  min-height: 100vh;
+  margin: 0 auto;
+  padding: 48px 20px;
+  background: linear-gradient(180deg, #141922 0%, #080a0f 45%);
+}
+
+/* 상단 제목 영역 */
+.header {
+  margin-bottom: 32px;
+}
+
+.label {
+  margin: 0 0 10px;
+  color: #bfff32;
+  font-size: 14px;
+  font-weight: bold;
+}
+
+.header h1 {
+  margin: 0;
+  font-size: 32px;
+  line-height: 1.25;
+}
+
+#progressText {
+  margin: 20px 0 0;
+  color: #aeb7c7;
+  font-size: 16px;
+}
+
+/* 운동 카드 목록 */
+.workout-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* 각각의 운동 카드 */
+.workout-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px;
+  background-color: #171b24;
+  border: 1px solid #272d39;
+  border-radius: 18px;
+  transition: 0.2s;
+}
+
+.workout-card span {
+  color: #8d98aa;
+  font-size: 13px;
+}
+
+.workout-card h2 {
+  margin: 6px 0 0;
+  font-size: 18px;
+}
+
+/* 각각의 완료 버튼 */
+.complete-button {
+  flex-shrink: 0;
+  padding: 10px 15px;
+  color: #ffffff;
+  background-color: #292f3c;
+  border: 0;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+/* 운동을 완료했을 때 적용할 디자인 */
+.workout-card.completed {
+  background-color: #1d2819;
+  border-color: #bfff32;
+}
+
+.workout-card.completed h2 {
+  color: #bfff32;
+  text-decoration: line-through;
+}
+
+.workout-card.completed .complete-button {
+  color: #111111;
+  background-color: #bfff32;
+}
+
+/* 전체 초기화 버튼 */
+#resetButton {
+  width: 100%;
+  margin-top: 28px;
+  padding: 16px;
+  color: #ffffff;
+  background-color: transparent;
+  border: 1px solid #363d4b;
+  border-radius: 14px;
+  font-size: 15px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+/* 운동 루틴 이미지 영역 */
+.routine-image {
+  width: 100%;
+  margin: 0 0 10px;
+  overflow: hidden;
+  background-color: #ffffff;
+  border: 2px solid #343b49;
+  border-radius: 18px;
+}
+
+/* 운동 루틴 이미지 */
+.routine-image img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+/* 루틴표 크게 보기 버튼 */
+.zoom-button {
+  width: 100%;
+  margin: 0 0 28px;
+  padding: 14px;
+  color: #ffffff;
+  background-color: #171b24;
+  border: 1px solid #343b49;
+  border-radius: 14px;
+  font-size: 15px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+/* 마우스를 올렸을 때 버튼 색상 변경 */
+.zoom-button:hover {
+  color: #111111;
+  background-color: #bfff32;
+  border-color: #bfff32;
+}
+
+/* 루틴 이미지에 확대용 마우스 표시 */
+#routineImage {
+  cursor: zoom-in;
+}
+
+/* 화면 전체를 덮는 확대 영역 */
+.image-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: none;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 70px 16px 30px;
+  overflow-y: auto;
+  background-color: rgba(0, 0, 0, 0.9);
+}
+
+/* JavaScript가 open을 붙이면 확대 영역 표시 */
+.image-modal.open {
+  display: flex;
+}
+
+/* 확대된 루틴 이미지 */
+.image-modal img {
+  display: block;
+  width: 100%;
+  max-width: 900px;
+  height: auto;
+  background-color: #ffffff;
+  border: 2px solid #596273;
+  border-radius: 18px;
+}
+
+/* 확대 화면 닫기 버튼 */
+.close-image-button {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  z-index: 1001;
+  width: 46px;
+  height: 46px;
+  padding: 0;
+  color: #ffffff;
+  background-color: #171b24;
+  border: 1px solid #596273;
+  border-radius: 50%;
+  font-size: 30px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+/* 확대 중에는 원래 화면이 움직이지 않도록 설정 */
+body.modal-open {
+  overflow: hidden;
+}
+/* =================================
+   헬스와 필라테스 브랜드 테마
+================================= */
+
+:root {
+  --brand-navy: #17233e;
+  --brand-blue: #1f5faa;
+  --brand-orange: #f56a00;
+  --brand-cream: #f6f3ed;
+  --brand-white: #ffffff;
+  --brand-gray: #6f7888;
+  --brand-border: #dce2eb;
+}
+
+/* 페이지 전체 */
+body {
+  background-color: #eae6de;
+  color: var(--brand-navy);
+  font-family:
+    "Pretendard",
+    "Noto Sans KR",
+    "Apple SD Gothic Neo",
+    "Malgun Gothic",
+    sans-serif;
+}
+
+/* 앱 배경 */
+.app {
+  background: linear-gradient(
+    180deg,
+    #fff8f1 0%,
+    var(--brand-cream) 42%,
+    #f3f6fa 100%
+  );
+}
+
+/* 상단 제목 */
+.label {
+  color: var(--brand-orange);
+}
+
+.header h1 {
+  color: var(--brand-navy);
+}
+
+#progressText {
+  color: var(--brand-blue);
+  font-weight: bold;
+}
+
+/* 루틴 이미지 */
+.routine-image {
+  border-color: #cad5e5;
+  box-shadow: 0 8px 24px rgba(23, 35, 62, 0.1);
+}
+
+/* 크게 보기 버튼 */
+.zoom-button {
+  color: var(--brand-orange);
+  background-color: var(--brand-white);
+  border-color: var(--brand-orange);
+}
+
+.zoom-button:hover {
+  color: var(--brand-white);
+  background-color: var(--brand-orange);
+  border-color: var(--brand-orange);
+}
+
+/* 운동 카드 */
+.workout-card {
+  background-color: var(--brand-white);
+  border-color: var(--brand-border);
+  box-shadow: 0 5px 16px rgba(23, 35, 62, 0.07);
+}
+
+.workout-card span {
+  color: var(--brand-blue);
+}
+
+.workout-card h2 {
+  color: var(--brand-navy);
+}
+
+/* 완료 버튼 */
+.complete-button {
+  color: var(--brand-orange);
+  background-color: #fff2e8;
+  border: 1px solid #ffd0ad;
+}
+
+/* 운동 완료 상태 */
+.workout-card.completed {
+  background-color: #eef5ff;
+  border-color: var(--brand-blue);
+}
+
+.workout-card.completed h2 {
+  color: var(--brand-blue);
+}
+
+.workout-card.completed .complete-button {
+  color: var(--brand-white);
+  background-color: var(--brand-blue);
+  border-color: var(--brand-blue);
+}
+
+/* 초기화 버튼 */
+#resetButton {
+  color: var(--brand-navy);
+  background-color: var(--brand-white);
+  border-color: var(--brand-border);
+}
+
+/* 확대 화면 닫기 버튼 */
+.close-image-button {
+  color: var(--brand-white);
+  background-color: var(--brand-orange);
+  border-color: var(--brand-white);
+}

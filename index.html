@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>오늘의 운동 체크</title>
+
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+  <main class="app">
+    <header class="header">
+      <p class="label">오늘의 운동</p>
+      <h1>운동을 하나씩<br>완료해 보세요</h1>
+      <p id="progressText">0 / 3 완료</p>
+    </header>
+
+    <figure class="routine-image">
+      <img id="routineImage" src="images/routine-guide.png" alt="월간 운동 루틴 안내표">
+    </figure>
+
+    <button id="openImageButton" class="zoom-button" type="button">
+      🔍 루틴표 크게 보기
+    </button>
+
+    <section class="workout-list">
+      <article class="workout-card">
+        <div>
+          <span>준비운동</span>
+          <h2>워밍업 5분</h2>
+        </div>
+        <button class="complete-button">완료</button>
+      </article>
+
+      <article class="workout-card">
+        <div>
+          <span>하체 운동</span>
+          <h2>스쿼트 3세트</h2>
+        </div>
+        <button class="complete-button">완료</button>
+      </article>
+
+      <article class="workout-card">
+        <div>
+          <span>마무리 운동</span>
+          <h2>스트레칭 5분</h2>
+        </div>
+        <button class="complete-button">완료</button>
+      </article>
+    </section>
+
+    <button id="resetButton">전체 초기화</button>
+  </main>
+
+  <div id="imageModal" class="image-modal">
+    <button
+      id="closeImageButton"
+      class="close-image-button"
+      type="button"
+      aria-label="크게 보기 닫기"
+    >
+      ×
+    </button>
+  
+    <img
+      src="images/routine-guide.png"
+      alt="확대된 월간 운동 루틴 안내표"
+    >
+  </div>
+  
+  <script src="script.js"></script>
+</body>
+
+</html>
