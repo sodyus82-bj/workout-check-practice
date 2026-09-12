@@ -8,6 +8,12 @@
   <title>오늘의 운동 체크</title>
 
   <link rel="stylesheet" href="style.css">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#ec6a1a">
+
+  <link rel="apple-touch-icon" href="images/icon-192.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="운동 체크">
 </head>
 
 <body>
@@ -51,26 +57,20 @@
         <button class="complete-button">완료</button>
       </article>
     </section>
-
+    <button id="installButton" class="install-button" type="button" hidden>
+      📲 홈 화면에 설치
+    </button>
     <button id="resetButton">전체 초기화</button>
   </main>
 
   <div id="imageModal" class="image-modal">
-    <button
-      id="closeImageButton"
-      class="close-image-button"
-      type="button"
-      aria-label="크게 보기 닫기"
-    >
+    <button id="closeImageButton" class="close-image-button" type="button" aria-label="크게 보기 닫기">
       ×
     </button>
-  
-    <img
-      src="images/routine-guide.png"
-      alt="확대된 월간 운동 루틴 안내표"
-    >
+
+    <img src="images/routine-guide.png" alt="확대된 월간 운동 루틴 안내표">
   </div>
-  
+
   <script src="script.js"></script>
 </body>
 

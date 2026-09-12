@@ -82,3 +82,69 @@ document.addEventListener("keydown", function (event) {
     closeImageModal();
   }
 });
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker
+      .register("./service-worker.js")
+      .catch((error) => {
+        console.error("서비스워커 등록 실패:", error);
+      });
+  });
+}
+// 홈 화면 설치 기능
+const installButton = document.getElementById("installButton");
+
+let deferredInstallPrompt = null;
+
+const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
+
+const isStandalone =
+  window.matchMedia("(display-mode: standalone)").matches ||
+  window.navigator.standalone === true;
+
+// 이미 설치된 상태가 아니라면 버튼 표시
+if (!isStandalone) {
+  installButton.hidden = false;
+
+  if (isIos) {
+    installButton.textContent = "📲 아이폰 설치 방법";
+  }
+}
+
+// 안드로이드·PC에서 설치 준비가 완료되었을 때
+window.addEventListener("beforeinstallprompt", (event) => {
+  event.preventDefault();
+  deferredInstallPrompt = event;
+  installButton.hidden = false;
+});
+
+// 설치 버튼 클릭
+installButton.addEventListener("click", async () => {
+  if (deferredInstallPrompt) {
+    deferredInstallPrompt.prompt();
+
+    const choice = await deferredInstallPrompt.userChoice;
+    deferredInstallPrompt = null;
+
+    if (choice.outcome === "accepted") {
+      installButton.hidden = true;
+    }
+
+    return;
+  }
+
+  if (isIos) {
+    alert(
+      "Safari의 공유 버튼을 누른 뒤 ‘홈 화면에 추가’를 선택하고, 마지막으로 ‘추가’를 눌러주세요."
+    );
+    return;
+  }
+
+  alert("브라우저 메뉴에서 ‘앱 설치’ 또는 ‘홈 화면에 추가’를 선택해주세요.");
+});
+
+// 설치가 완료되면 버튼 숨기기
+window.addEventListener("appinstalled", () => {
+  installButton.hidden = true;
+  deferredInstallPrompt = null;
+});

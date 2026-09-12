@@ -213,6 +213,7 @@ body {
 body.modal-open {
   overflow: hidden;
 }
+
 /* =================================
    헬스와 필라테스 브랜드 테마
 ================================= */
@@ -241,12 +242,10 @@ body {
 
 /* 앱 배경 */
 .app {
-  background: linear-gradient(
-    180deg,
-    #fff8f1 0%,
-    var(--brand-cream) 42%,
-    #f3f6fa 100%
-  );
+  background: linear-gradient(180deg,
+      #fff8f1 0%,
+      var(--brand-cream) 42%,
+      #f3f6fa 100%);
 }
 
 /* 상단 제목 */
@@ -332,4 +331,28 @@ body {
   color: var(--brand-white);
   background-color: var(--brand-orange);
   border-color: var(--brand-white);
+}
+
+/* 홈 화면 설치 버튼 */
+.install-button {
+  width: 100%;
+  margin: 0 0 12px;
+  padding: 16px;
+  color: var(--brand-white);
+  background-color: var(--brand-orange);
+  border: 1px solid var(--brand-orange);
+  border-radius: 14px;
+  font: inherit;
+  font-weight: bold;
+  cursor: pointer;
+  box-shadow: 0 5px 16px rgba(23, 35, 62, 0.08);
+}
+
+.install-button:hover {
+  color: var(--brand-orange);
+  background-color: var(--brand-white);
+}
+
+.install-button[hidden] {
+  display: none;
 }
