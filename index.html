@@ -15,9 +15,37 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="운동 체크">
 </head>
+<div class="member-toolbar">
+  <p>
+    <span>배정 루틴</span>
+    <strong id="assignedRoutineName">불러오는 중...</strong>
+  </p>
+
+  <button id="logoutButton" type="button">로그아웃</button>
+</div>
 
 <body>
-  <main class="app">
+  <section id="loginScreen" class="login-screen">
+    <div class="login-box">
+      <p class="label">오늘의 운동</p>
+      <h1>회원 로그인</h1>
+      <p class="login-description">
+        배정받은 운동 루틴을 확인해 보세요.
+      </p>
+
+      <form id="loginForm" class="login-form">
+        <label for="loginEmail">이메일</label>
+        <input id="loginEmail" type="email" autocomplete="email" required>
+
+        <label for="loginPassword">비밀번호</label>
+        <input id="loginPassword" type="password" autocomplete="current-password" required>
+
+        <button id="loginButton" type="submit">로그인</button>
+        <p id="loginMessage" class="login-message"></p>
+      </form>
+    </div>
+  </section>
+  <main id="appScreen" class="app" hidden>
     <header class="header">
       <p class="label">오늘의 운동</p>
       <h1>운동을 하나씩<br>완료해 보세요</h1>
@@ -58,7 +86,7 @@
       </article>
     </section>
     <button id="installButton" class="install-button" type="button" hidden>
-      📲 홈 화면에 설치
+      📲 이 앱을 홈 화면에 설치
     </button>
     <button id="resetButton">전체 초기화</button>
   </main>
@@ -70,8 +98,10 @@
 
     <img src="images/routine-guide.png" alt="확대된 월간 운동 루틴 안내표">
   </div>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <script src="script.js"></script>
 </body>
+
 
 </html>

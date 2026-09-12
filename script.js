@@ -1,3 +1,10 @@
+const SUPABASE_URL = "https://cithfqbzszgiqjifhrqy.supabase.co";
+const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_0mGHHS1HcRHh0Ttt8sZwtA_MBI22p1w";
+
+const supabaseClient = window.supabase.createClient(
+  SUPABASE_URL,
+  SUPABASE_PUBLISHABLE_KEY
+);
 // 운동 체크 기능에 필요한 요소
 const completeButtons = document.querySelectorAll(".complete-button");
 const workoutCards = document.querySelectorAll(".workout-card");
@@ -148,3 +155,110 @@ window.addEventListener("appinstalled", () => {
   installButton.hidden = true;
   deferredInstallPrompt = null;
 });
+// 회원 로그인에 필요한 화면 요소
+const loginScreen = document.querySelector("#loginScreen");
+const appScreen = document.querySelector("#appScreen");
+const loginForm = document.querySelector("#loginForm");
+const loginEmail = document.querySelector("#loginEmail");
+const loginPassword = document.querySelector("#loginPassword");
+const loginButton = document.querySelector("#loginButton");
+const loginMessage = document.querySelector("#loginMessage");
+const assignedRoutineName = document.querySelector("#assignedRoutineName");
+const logoutButton = document.querySelector("#logoutButton");
+
+// 로그인한 회원에게 배정된 최신 루틴 불러오기
+async function loadMemberRoutine() {
+  const routineElements = [
+    routineImage.closest(".routine-image"),
+    openImageButton
+  ];
+
+  // 데이터를 확인하기 전에는 기존 예제 루틴 숨기기
+  routineElements.forEach((element) => {
+    element.hidden = true;
+  });
+
+  const { data, error } = await supabaseClient
+    .from("member_routines")
+    .select("routine_name, routine_image_url")
+    .eq("is_active", true)
+    .order("assigned_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    console.error("루틴 불러오기 실패:", error);
+    assignedRoutineName.textContent = "루틴을 불러오지 못했습니다.";
+    return;
+  }
+
+  if (!data) {
+    assignedRoutineName.textContent = "배정된 루틴이 없습니다.";
+    return;
+  }
+
+  assignedRoutineName.textContent = data.routine_name;
+  routineImage.src = data.routine_image_url;
+  routineImage.alt = data.routine_name;
+
+  // 배정된 데이터가 있을 때만 루틴 표시
+  routineElements.forEach((element) => {
+    element.hidden = false;
+  });
+}
+
+// 로그인 후 운동 앱 표시
+async function showWorkoutApp() {
+  loginScreen.hidden = true;
+  appScreen.hidden = false;
+  await loadMemberRoutine();
+}
+
+// 로그인 버튼 기능
+loginForm.addEventListener("submit", async function (event) {
+  event.preventDefault();
+
+  loginMessage.textContent = "로그인 중...";
+  loginButton.disabled = true;
+
+  const { error } = await supabaseClient.auth.signInWithPassword({
+    email: loginEmail.value.trim(),
+    password: loginPassword.value
+  });
+
+  if (error) {
+    loginMessage.textContent = "이메일 또는 비밀번호를 확인해 주세요.";
+    loginButton.disabled = false;
+    return;
+  }
+
+  loginMessage.textContent = "";
+  loginForm.reset();
+  loginButton.disabled = false;
+  await showWorkoutApp();
+});
+
+// 이미 로그인한 상태인지 확인
+async function initializeLogin() {
+  const {
+    data: { session }
+  } = await supabaseClient.auth.getSession();
+
+  if (session) {
+    await showWorkoutApp();
+  }
+}
+
+logoutButton.addEventListener("click", async function () {
+  const { error } = await supabaseClient.auth.signOut();
+
+  if (error) {
+    alert("로그아웃하지 못했습니다. 다시 시도해 주세요.");
+    return;
+  }
+
+  appScreen.hidden = true;
+  loginScreen.hidden = false;
+  loginMessage.textContent = "";
+});
+initializeLogin();

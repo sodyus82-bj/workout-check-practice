@@ -356,3 +356,132 @@ body {
 .install-button[hidden] {
   display: none;
 }
+
+/* 회원 로그인 화면 */
+.login-screen {
+  min-height: 100dvh;
+  max-width: 430px;
+  margin: 0 auto;
+  padding: 32px 24px;
+  display: flex;
+  align-items: center;
+  background-color: #fff8f0;
+  box-sizing: border-box;
+}
+
+.login-box {
+  width: 100%;
+  padding: 32px 24px;
+  background-color: var(--brand-white);
+  border: 1px solid var(--brand-border);
+  border-radius: 20px;
+  box-shadow: 0 10px 30px rgba(23, 35, 62, 0.1);
+}
+
+.login-box h1 {
+  margin: 8px 0 12px;
+  color: var(--brand-navy);
+  font-size: 32px;
+}
+
+.login-description {
+  margin: 0 0 28px;
+  color: #667085;
+  line-height: 1.5;
+}
+
+.login-form {
+  display: grid;
+  gap: 10px;
+}
+
+.login-form label {
+  margin-top: 6px;
+  color: var(--brand-navy);
+  font-size: 14px;
+  font-weight: bold;
+}
+
+.login-form input {
+  width: 100%;
+  padding: 14px;
+  border: 1px solid var(--brand-border);
+  border-radius: 12px;
+  box-sizing: border-box;
+  font: inherit;
+}
+
+.login-form input:focus {
+  border-color: var(--brand-orange);
+  outline: 2px solid rgba(236, 106, 26, 0.15);
+}
+
+#loginButton {
+  margin-top: 12px;
+  padding: 15px;
+  color: var(--brand-white);
+  background-color: var(--brand-orange);
+  border: 1px solid var(--brand-orange);
+  border-radius: 14px;
+  font: inherit;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.login-message {
+  min-height: 22px;
+  margin: 4px 0 0;
+  color: #c62828;
+  font-size: 14px;
+  text-align: center;
+}
+
+.app[hidden],
+.login-screen[hidden] {
+  display: none;
+}
+
+/* 배정 루틴 정보와 로그아웃 */
+.member-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 0 0 18px;
+  padding: 14px 16px;
+  background-color: var(--brand-white);
+  border: 1px solid var(--brand-border);
+  border-radius: 14px;
+}
+
+.member-toolbar p {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+}
+
+.member-toolbar span {
+  color: #667085;
+  font-size: 12px;
+}
+
+.member-toolbar strong {
+  color: var(--brand-navy);
+  font-size: 14px;
+}
+
+#logoutButton {
+  flex-shrink: 0;
+  padding: 9px 12px;
+  color: var(--brand-orange);
+  background-color: var(--brand-white);
+  border: 1px solid var(--brand-orange);
+  border-radius: 10px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: bold;
+  cursor: pointer;
+}
+[hidden] {
+  display: none !important;
+}
