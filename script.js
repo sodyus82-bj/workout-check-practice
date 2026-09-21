@@ -121,9 +121,21 @@ const loginEmail = document.querySelector("#loginEmail");
 const loginPassword = document.querySelector("#loginPassword");
 const loginButton = document.querySelector("#loginButton");
 const loginMessage = document.querySelector("#loginMessage");
-
+const showSignupButton = document.querySelector("#showSignupButton");
+const signupForm = document.querySelector("#signupForm");
+const signupEmail = document.querySelector("#signupEmail");
+const signupPassword = document.querySelector("#signupPassword");
+const signupPasswordConfirm = document.querySelector(
+  "#signupPasswordConfirm"
+);
+const signupButton = document.querySelector("#signupButton");
+const signupMessage = document.querySelector("#signupMessage");
+const hideSignupButton = document.querySelector("#hideSignupButton");
 const assignedRoutineName = document.querySelector("#assignedRoutineName");
 const routineDescription = document.querySelector("#routineDescription");
+const toggleRoutineDescriptionButton = document.querySelector(
+  "#toggleRoutineDescriptionButton"
+);
 const logoutButton = document.querySelector("#logoutButton");
 
 const adminMemberSelect = document.querySelector("#adminMemberSelect");
@@ -162,19 +174,26 @@ function appendTextWithLinks(container, text) {
 
 function renderRoutineDescription(description) {
   routineDescription.replaceChildren();
+  routineDescription.classList.remove("is-expanded");
 
   if (!description || !description.trim()) {
     routineDescription.hidden = true;
+    toggleRoutineDescriptionButton.hidden = true;
     return;
   }
 
   description.trim().split(/\n+/).forEach((line) => {
     const paragraph = document.createElement("p");
+
     appendTextWithLinks(paragraph, line);
+
     routineDescription.append(paragraph);
   });
 
   routineDescription.hidden = false;
+  toggleRoutineDescriptionButton.hidden = false;
+  toggleRoutineDescriptionButton.textContent = "설명 더 보기";
+  toggleRoutineDescriptionButton.setAttribute("aria-expanded", "false");
 }
 // 회원에게 배정된 최신 루틴 불러오기
 async function loadMemberRoutine(userId) {
@@ -501,5 +520,78 @@ async function handleLogout() {
 
 logoutButton.addEventListener("click", handleLogout);
 adminLogoutButton.addEventListener("click", handleLogout);
+toggleRoutineDescriptionButton.addEventListener("click", function () {
+  const isExpanded = routineDescription.classList.toggle("is-expanded");
 
+  toggleRoutineDescriptionButton.textContent = isExpanded
+    ? "설명 접기"
+    : "설명 더 보기";
+
+  toggleRoutineDescriptionButton.setAttribute(
+    "aria-expanded",
+    String(isExpanded)
+  );
+});
+function showSignupForm() {
+  loginForm.hidden = true;
+  showSignupButton.hidden = true;
+  signupForm.hidden = false;
+
+  loginMessage.textContent = "";
+  signupMessage.textContent = "";
+  signupForm.reset();
+  signupEmail.focus();
+}
+
+function showLoginForm() {
+  signupForm.hidden = true;
+  loginForm.hidden = false;
+  showSignupButton.hidden = false;
+
+  signupMessage.textContent = "";
+  signupForm.reset();
+}
+
+showSignupButton.addEventListener("click", showSignupForm);
+
+hideSignupButton.addEventListener("click", showLoginForm);
+
+signupForm.addEventListener("submit", async function (event) {
+  event.preventDefault();
+
+  if (signupPassword.value !== signupPasswordConfirm.value) {
+    signupMessage.textContent = "비밀번호가 서로 다릅니다.";
+    return;
+  }
+
+  signupMessage.textContent = "회원가입 중...";
+  signupButton.disabled = true;
+
+  const { data, error } = await supabaseClient.auth.signUp({
+    email: signupEmail.value.trim(),
+    password: signupPassword.value
+  });
+
+  if (error) {
+    signupMessage.textContent =
+      error.message === "User already registered"
+        ? "이미 가입된 이메일입니다."
+        : "회원가입하지 못했습니다. 다시 시도해 주세요.";
+
+    signupButton.disabled = false;
+    return;
+  }
+
+  if (!data.session) {
+    signupMessage.textContent =
+      "회원가입은 완료됐습니다. 이메일 인증 설정을 다시 확인해 주세요.";
+
+    signupButton.disabled = false;
+    return;
+  }
+
+  signupForm.reset();
+  signupButton.disabled = false;
+
+  await initializeLogin();});
 initializeLogin();

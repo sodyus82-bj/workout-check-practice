@@ -35,6 +35,50 @@
         <button id="loginButton" type="submit">로그인</button>
         <p id="loginMessage" class="login-message"></p>
       </form>
+      <button id="showSignupButton" class="signup-link-button" type="button">
+        처음이신가요? 회원가입
+      </button>
+
+      <form id="signupForm" class="login-form" hidden>
+        <p class="label">회원가입</p>
+
+        <label for="signupEmail">이메일</label>
+        <input
+          id="signupEmail"
+          type="email"
+          autocomplete="email"
+          required
+        >
+
+        <label for="signupPassword">비밀번호</label>
+        <input
+          id="signupPassword"
+          type="password"
+          autocomplete="new-password"
+          minlength="6"
+          required
+        >
+
+        <label for="signupPasswordConfirm">비밀번호 확인</label>
+        <input
+          id="signupPasswordConfirm"
+          type="password"
+          autocomplete="new-password"
+          minlength="6"
+          required
+        >
+
+        <button id="signupButton" type="submit">회원가입</button>
+        <p id="signupMessage" class="login-message"></p>
+
+        <button
+          id="hideSignupButton"
+          class="signup-link-button"
+          type="button"
+        >
+          로그인으로 돌아가기
+        </button>
+      </form>
     </div>
   </section>
   <main id="appScreen" class="app" hidden>
@@ -63,6 +107,15 @@
       <img id="routineImage" src="images/routine-guide.png" alt="월간 운동 루틴 안내표">
     </figure>
     <section id="routineDescription" class="routine-description" hidden></section>
+    <button
+  id="toggleRoutineDescriptionButton"
+  class="toggle-description-button"
+  type="button"
+  hidden
+  aria-expanded="false"
+>
+  설명 더 보기
+</button>
     <button id="openImageButton" class="zoom-button" type="button">
       🔍 루틴표 크게 보기
     </button>

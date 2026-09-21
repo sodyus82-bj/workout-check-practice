@@ -603,3 +603,54 @@ body {
   text-align: center;
   text-decoration: none;
 }
+.routine-description {
+  position: relative;
+  max-height: 190px;
+  overflow: hidden;
+}
+
+.routine-description:not(.is-expanded)::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 60px;
+  pointer-events: none;
+  background: linear-gradient(to bottom, transparent, var(--brand-white));
+}
+
+.routine-description.is-expanded {
+  max-height: none;
+}
+
+.toggle-description-button {
+  width: 100%;
+  margin: -6px 0 16px;
+  padding: 12px;
+  color: var(--brand-orange);
+  background-color: var(--brand-white);
+  border: 1px solid var(--brand-orange);
+  border-radius: 12px;
+  font: inherit;
+  font-weight: bold;
+  cursor: pointer;
+}
+.signup-link-button {
+  display: block;
+  width: 100%;
+  margin-top: 18px;
+  padding: 8px;
+  color: var(--brand-orange);
+  background: transparent;
+  border: 0;
+  font: inherit;
+  font-weight: bold;
+  text-align: center;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+#signupForm .signup-link-button {
+  margin-top: 4px;
+}
