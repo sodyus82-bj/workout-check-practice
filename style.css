@@ -674,3 +674,25 @@ body {
   margin-bottom: 4px;
   opacity: 0.82;
 }
+.password-field {
+  position: relative;
+}
+
+.password-field input {
+  padding-right: 52px;
+}
+
+.password-toggle {
+  position: absolute;
+  top: 50%;
+  right: 10px;
+  width: 36px;
+  padding: 6px;
+  color: #52657f;
+  background: transparent;
+  border: 0;
+  transform: translateY(-50%);
+  cursor: pointer;
+  font-size: 20px;
+  line-height: 1;
+}

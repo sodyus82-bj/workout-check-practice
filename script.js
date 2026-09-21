@@ -594,4 +594,21 @@ signupForm.addEventListener("submit", async function (event) {
   signupButton.disabled = false;
 
   await initializeLogin();});
+  document.querySelectorAll("[data-password-toggle]").forEach((button) => {
+    button.addEventListener("click", function () {
+      const passwordInput = document.querySelector(
+        `#${button.dataset.passwordToggle}`
+      );
+  
+      const isHidden = passwordInput.type === "password";
+  
+      passwordInput.type = isHidden ? "text" : "password";
+      button.textContent = isHidden ? "🙈" : "👁";
+      button.setAttribute(
+        "aria-label",
+        isHidden ? "비밀번호 숨기기" : "비밀번호 보기"
+      );
+      button.setAttribute("aria-pressed", String(isHidden));
+    });
+  });
 initializeLogin();

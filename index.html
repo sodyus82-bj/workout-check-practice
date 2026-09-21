@@ -19,11 +19,6 @@
 <body>
   <section id="loginScreen" class="login-screen">
     <div class="login-box">
-      <img
-  class="screen-logo screen-logo-top"
-  src="images/center-logo.png"
-  alt="헬스와 필라테스 화곡점"
->
       <p class="label">오늘의 운동</p>
       <h1>회원 로그인</h1>
       <p class="login-description">
@@ -35,7 +30,25 @@
         <input id="loginEmail" type="email" autocomplete="email" required>
 
         <label for="loginPassword">비밀번호</label>
-        <input id="loginPassword" type="password" autocomplete="current-password" required>
+
+<div class="password-field">
+  <input
+    id="loginPassword"
+    type="password"
+    autocomplete="current-password"
+    required
+  >
+
+  <button
+    class="password-toggle"
+    type="button"
+    data-password-toggle="loginPassword"
+    aria-label="비밀번호 보기"
+    aria-pressed="false"
+  >
+    👁
+  </button>
+</div>
 
         <button id="loginButton" type="submit">로그인</button>
         <p id="loginMessage" class="login-message"></p>
@@ -56,22 +69,48 @@
         >
 
         <label for="signupPassword">비밀번호</label>
-        <input
-          id="signupPassword"
-          type="password"
-          autocomplete="new-password"
-          minlength="6"
-          required
-        >
+
+        <div class="password-field">
+          <input
+            id="signupPassword"
+            type="password"
+            autocomplete="new-password"
+            minlength="6"
+            required
+          >
+        
+          <button
+            class="password-toggle"
+            type="button"
+            data-password-toggle="signupPassword"
+            aria-label="비밀번호 보기"
+            aria-pressed="false"
+          >
+            👁
+          </button>
+        </div>
 
         <label for="signupPasswordConfirm">비밀번호 확인</label>
-        <input
-          id="signupPasswordConfirm"
-          type="password"
-          autocomplete="new-password"
-          minlength="6"
-          required
-        >
+
+        <div class="password-field">
+          <input
+            id="signupPasswordConfirm"
+            type="password"
+            autocomplete="new-password"
+            minlength="6"
+            required
+          >
+        
+          <button
+            class="password-toggle"
+            type="button"
+            data-password-toggle="signupPasswordConfirm"
+            aria-label="비밀번호 보기"
+            aria-pressed="false"
+          >
+            👁
+          </button>
+        </div>
 
         <button id="signupButton" type="submit">회원가입</button>
         <p id="signupMessage" class="login-message"></p>
