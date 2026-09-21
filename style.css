@@ -656,10 +656,12 @@ body {
 }
 .screen-logo {
   display: block;
-  width: min(80px, 58%);
+  width: 80px;
+  max-width: calc(100% - 32px);
   height: auto;
   margin-right: auto;
   margin-left: auto;
+  object-fit: contain;
 }
 
 .screen-logo-top {
