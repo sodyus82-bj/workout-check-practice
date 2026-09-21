@@ -123,6 +123,8 @@ const loginButton = document.querySelector("#loginButton");
 const loginMessage = document.querySelector("#loginMessage");
 const showSignupButton = document.querySelector("#showSignupButton");
 const signupForm = document.querySelector("#signupForm");
+const signupName = document.querySelector("#signupName");
+const signupPhoneLast4 = document.querySelector("#signupPhoneLast4");
 const signupEmail = document.querySelector("#signupEmail");
 const signupPassword = document.querySelector("#signupPassword");
 const signupPasswordConfirm = document.querySelector(
@@ -275,7 +277,7 @@ async function showWorkoutApp(userId) {
 async function loadAdminMembers() {
   const { data, error } = await supabaseClient
     .from("profiles")
-    .select("id, display_name, email")
+    .select("id, display_name, email, phone_last4")
     .eq("role", "member")
     .order("email");
 
@@ -295,12 +297,19 @@ async function loadAdminMembers() {
   adminMemberSelect.innerHTML =
     '<option value="">루틴을 관리할 회원을 선택하세요.</option>';
 
-  data.forEach((member) => {
-    const option = document.createElement("option");
-    option.value = member.id;
-    option.textContent = `${member.display_name} (${member.email})`;
-    adminMemberSelect.append(option);
-  });
+    data.forEach((member) => {
+      const option = document.createElement("option");
+      const memberName = member.display_name || "이름 없음";
+      const phoneText = member.phone_last4
+        ? ` · ${member.phone_last4}`
+        : "";
+    
+      option.value = member.id;
+      option.textContent =
+        `${memberName}${phoneText} (${member.email})`;
+    
+      adminMemberSelect.append(option);
+    });
 }
 
 // 관리자 화면 표시
@@ -559,6 +568,22 @@ hideSignupButton.addEventListener("click", showLoginForm);
 signupForm.addEventListener("submit", async function (event) {
   event.preventDefault();
 
+  const name = signupName.value.trim();
+  const phoneLast4 = signupPhoneLast4.value.trim();
+
+  if (!name) {
+    signupMessage.textContent = "이름을 입력해 주세요.";
+    signupName.focus();
+    return;
+  }
+
+  if (!/^\d{4}$/.test(phoneLast4)) {
+    signupMessage.textContent =
+      "전화번호 뒷 4자리를 숫자로 입력해 주세요.";
+    signupPhoneLast4.focus();
+    return;
+  }
+
   if (signupPassword.value !== signupPasswordConfirm.value) {
     signupMessage.textContent = "비밀번호가 서로 다릅니다.";
     return;
@@ -569,7 +594,13 @@ signupForm.addEventListener("submit", async function (event) {
 
   const { data, error } = await supabaseClient.auth.signUp({
     email: signupEmail.value.trim(),
-    password: signupPassword.value
+    password: signupPassword.value,
+    options: {
+      data: {
+        display_name: name,
+        phone_last4: phoneLast4
+      }
+    }
   });
 
   if (error) {
@@ -593,7 +624,8 @@ signupForm.addEventListener("submit", async function (event) {
   signupForm.reset();
   signupButton.disabled = false;
 
-  await initializeLogin();});
+  await initializeLogin();
+});
   document.querySelectorAll("[data-password-toggle]").forEach((button) => {
     button.addEventListener("click", function () {
       const passwordInput = document.querySelector(

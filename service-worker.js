@@ -1,56 +1,85 @@
-const CACHE_NAME = "workout-check-v3";
+const CACHE_NAME = "workout-check-v5";
 
 const APP_FILES = [
-    "./",
-    "./index.html",
-    "./style.css?v=3",
-    "./script.js?v=3",
-    "./manifest.json",
-    "./images/routine-guide.png",
-    "./images/icon-192.png",
-    "./images/icon-512.png"
+  "./",
+  "./index.html",
+  "./style.css?v=5",
+  "./script.js?v=5",
+  "./manifest.json",
+  "./images/routine-guide.png",
+  "./images/center-logo.png",
+  "./images/icon-192.png",
+  "./images/icon-512.png"
 ];
 
 self.addEventListener("install", (event) => {
-    event.waitUntil(
-        caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_FILES))
-    );
+  event.waitUntil(
+    caches
+      .open(CACHE_NAME)
+      .then((cache) => cache.addAll(APP_FILES))
+      .then(() => self.skipWaiting())
+  );
 });
 
 self.addEventListener("activate", (event) => {
-    event.waitUntil(
-        caches.keys().then((names) =>
-            Promise.all(
-                names
-                    .filter((name) => name !== CACHE_NAME)
-                    .map((name) => caches.delete(name))
-            )
+  event.waitUntil(
+    caches
+      .keys()
+      .then((names) =>
+        Promise.all(
+          names
+            .filter((name) => name !== CACHE_NAME)
+            .map((name) => caches.delete(name))
         )
-    );
+      )
+      .then(() => self.clients.claim())
+  );
 });
 
 self.addEventListener("fetch", (event) => {
-    if (event.request.method !== "GET") return;
+  const request = event.request;
+  const requestUrl = new URL(request.url);
 
-    event.respondWith(
-        fetch(event.request)
-            .then((response) => {
-                const copy = response.clone();
+  // 외부 Supabase 요청과 GET 이외의 요청은 캐시하지 않습니다.
+  if (
+    request.method !== "GET" ||
+    requestUrl.origin !== self.location.origin
+  ) {
+    return;
+  }
 
-                caches.open(CACHE_NAME).then((cache) => {
-                    cache.put(event.request, copy);
-                });
+  event.respondWith(
+    fetch(request)
+      .then((response) => {
+        if (response.ok) {
+          const responseCopy = response.clone();
 
-                return response;
-            })
-            .catch(() =>
-                caches.match(event.request).then((cachedResponse) => {
-                    if (cachedResponse) return cachedResponse;
+          event.waitUntil(
+            caches
+              .open(CACHE_NAME)
+              .then((cache) => cache.put(request, responseCopy))
+          );
+        }
 
-                    if (event.request.mode === "navigate") {
-                        return caches.match("./index.html");
-                    }
-                })
-            )
-    );
+        return response;
+      })
+      .catch(async () => {
+        const cachedResponse = await caches.match(request);
+
+        if (cachedResponse) {
+          return cachedResponse;
+        }
+
+        if (request.mode === "navigate") {
+          return caches.match("./index.html");
+        }
+
+        return new Response("오프라인 상태입니다.", {
+          status: 503,
+          headers: {
+            "Content-Type": "text/plain; charset=utf-8"
+          }
+        });
+      })
+  );
 });

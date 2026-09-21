@@ -7,7 +7,7 @@
 
   <title>오늘의 운동 체크</title>
 
-  <link rel="stylesheet" href="style.css?v=4">
+  <link rel="stylesheet" href="style.css?v=5">
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#ec6a1a">
 
@@ -59,7 +59,26 @@
 
       <form id="signupForm" class="login-form" hidden>
         <p class="label">회원가입</p>
-
+        <label for="signupName">이름</label>
+        <input
+          id="signupName"
+          type="text"
+          autocomplete="name"
+          maxlength="20"
+          required
+        >
+        
+        <label for="signupPhoneLast4">전화번호 뒷 4자리</label>
+        <input
+          id="signupPhoneLast4"
+          type="text"
+          inputmode="numeric"
+          autocomplete="off"
+          maxlength="4"
+          pattern="[0-9]{4}"
+          placeholder="숫자 4자리"
+          required
+        >
         <label for="signupEmail">이메일</label>
         <input
           id="signupEmail"
@@ -250,7 +269,7 @@
   </div>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-  <script src="script.js?v=4"></script>
+  <script src="script.js?v=5"></script>
 </body>
 
 
