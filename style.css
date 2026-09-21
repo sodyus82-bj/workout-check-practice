@@ -485,3 +485,108 @@ body {
 [hidden] {
   display: none !important;
 }
+/* 관리자 루틴 설정 화면 */
+.admin-screen {
+  padding-bottom: 40px;
+}
+
+.admin-card {
+  display: grid;
+  gap: 10px;
+  margin: 18px 0;
+  padding: 18px;
+  background-color: var(--brand-white);
+  border: 1px solid var(--brand-border);
+  border-radius: 14px;
+}
+
+.admin-card label {
+  color: var(--brand-navy);
+  font-size: 14px;
+  font-weight: bold;
+}
+
+.admin-card input,
+.admin-card select {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 42px;
+  padding: 10px 12px;
+  font: inherit;
+  border: 1px solid var(--brand-border);
+  border-radius: 10px;
+}
+
+#adminRoutinePreview {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  max-height: 320px;
+  margin-top: 6px;
+  object-fit: contain;
+  border: 1px solid var(--brand-border);
+  border-radius: 10px;
+  background-color: #f8fafc;
+}
+
+#saveAdminRoutineButton {
+  width: 100%;
+  padding: 13px;
+  color: var(--brand-white);
+  background-color: var(--brand-orange);
+  border: 0;
+  border-radius: 10px;
+  font: inherit;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+#saveAdminRoutineButton:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.admin-message {
+  margin: 0;
+  color: #475467;
+  font-size: 14px;
+  line-height: 1.5;
+}
+/* 루틴 설명과 링크 */
+.admin-card textarea {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 170px;
+  padding: 12px;
+  font: inherit;
+  line-height: 1.6;
+  border: 1px solid var(--brand-border);
+  border-radius: 10px;
+  resize: vertical;
+}
+
+.routine-description {
+  margin: 0 0 16px;
+  padding: 16px;
+  color: var(--brand-navy);
+  background-color: var(--brand-white);
+  border: 1px solid var(--brand-border);
+  border-radius: 14px;
+  line-height: 1.7;
+}
+
+.routine-description p {
+  margin: 0 0 10px;
+  white-space: pre-wrap;
+}
+
+.routine-description p:last-child {
+  margin-bottom: 0;
+}
+
+.routine-description a {
+  color: var(--brand-orange);
+  font-weight: bold;
+  text-decoration: underline;
+  overflow-wrap: anywhere;
+}
