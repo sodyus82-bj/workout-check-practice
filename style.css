@@ -654,3 +654,21 @@ body {
 #signupForm .signup-link-button {
   margin-top: 4px;
 }
+.screen-logo {
+  display: block;
+  width: min(80px, 58%);
+  height: auto;
+  margin-right: auto;
+  margin-left: auto;
+}
+
+.screen-logo-top {
+  margin-top: 4px;
+  margin-bottom: 22px;
+}
+
+.screen-logo-bottom {
+  margin-top: 32px;
+  margin-bottom: 4px;
+  opacity: 0.82;
+}
