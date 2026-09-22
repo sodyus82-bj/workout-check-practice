@@ -258,13 +258,13 @@ function renderWorkoutCalendar() {
     }
 
     dateButton.addEventListener("click", function () {
-        selectedWorkoutDate =
-          selectedWorkoutDate === dateKey
-            ? ""
-            : dateKey;
+      selectedWorkoutDate =
+        selectedWorkoutDate === dateKey
+          ? ""
+          : dateKey;
 
-        renderWorkoutCalendar();
-      });
+      renderWorkoutCalendar();
+    });
 
     workoutCalendarDays.append(dateButton);
   }
@@ -340,11 +340,44 @@ const workoutPhotoCaption =
 
 const workoutRecordSaveMessage =
   document.querySelector("#workoutRecordSaveMessage");
+const workoutCameraCanvas =
+  document.querySelector("#workoutCameraCanvas");
+
+const workoutPhotoPreview =
+  document.querySelector("#workoutPhotoPreview");
+
+const workoutPhotoDate =
+  document.querySelector("#workoutPhotoDate");
+
+const retakeWorkoutPhotoButton =
+  document.querySelector("#retakeWorkoutPhotoButton");
+
+const saveWorkoutRecordButton =
+  document.querySelector("#saveWorkoutRecordButton");
 
 // 현재 실행 중인 카메라 정보
 let workoutCameraStream = null;
 let workoutCameraFacingMode = "user";
 let workoutCameraRequestId = 0;
+let capturedWorkoutPhotoBlob = null;
+let workoutPhotoPreviewUrl = "";
+let workoutPhotoTakenAt = null;
+
+// 촬영한 임시 사진 초기화
+function clearCapturedWorkoutPhoto() {
+  if (workoutPhotoPreviewUrl) {
+    URL.revokeObjectURL(workoutPhotoPreviewUrl);
+  }
+
+  workoutPhotoPreviewUrl = "";
+  capturedWorkoutPhotoBlob = null;
+  workoutPhotoTakenAt = null;
+
+  workoutPhotoPreview.removeAttribute("src");
+  workoutPhotoCaption.value = "";
+  workoutPhotoDate.textContent = "";
+  workoutRecordSaveMessage.textContent = "";
+}
 
 // 실행 중인 카메라 끄기
 function stopWorkoutCamera() {
@@ -458,7 +491,6 @@ async function openWorkoutCamera() {
   workoutCameraView.hidden = false;
   workoutPhotoComposer.hidden = true;
 
-  workoutPhotoCaption.value = "";
   workoutRecordSaveMessage.textContent = "";
 
   document.body.classList.add("camera-open");
@@ -471,6 +503,7 @@ async function openWorkoutCamera() {
 // 카메라 화면 닫기
 function closeWorkoutCamera() {
   stopWorkoutCamera();
+  clearCapturedWorkoutPhoto();
 
   workoutCameraModal.hidden = true;
   workoutCameraView.hidden = false;
@@ -485,6 +518,120 @@ async function switchWorkoutCamera() {
     workoutCameraFacingMode === "user"
       ? "environment"
       : "user";
+
+  await startWorkoutCamera();
+}
+// 현재 카메라 화면 촬영
+async function captureWorkoutPhoto() {
+  const sourceWidth = workoutCameraVideo.videoWidth;
+  const sourceHeight = workoutCameraVideo.videoHeight;
+
+  if (!sourceWidth || !sourceHeight) {
+    workoutCameraMessage.hidden = false;
+    workoutCameraMessage.textContent =
+      "카메라 준비가 끝난 뒤 다시 촬영해 주세요.";
+
+    return;
+  }
+
+  captureWorkoutPhotoButton.disabled = true;
+
+  try {
+    const maximumSize = 1600;
+
+    const imageScale = Math.min(
+      1,
+      maximumSize / Math.max(sourceWidth, sourceHeight)
+    );
+
+    workoutCameraCanvas.width =
+      Math.round(sourceWidth * imageScale);
+
+    workoutCameraCanvas.height =
+      Math.round(sourceHeight * imageScale);
+
+    const drawingContext =
+      workoutCameraCanvas.getContext("2d");
+
+    drawingContext.save();
+
+    // 전면 카메라는 화면에 보이는 방향대로 저장
+    if (workoutCameraFacingMode === "user") {
+      drawingContext.translate(
+        workoutCameraCanvas.width,
+        0
+      );
+
+      drawingContext.scale(-1, 1);
+    }
+
+    drawingContext.drawImage(
+      workoutCameraVideo,
+      0,
+      0,
+      workoutCameraCanvas.width,
+      workoutCameraCanvas.height
+    );
+
+    drawingContext.restore();
+
+    const photoBlob = await new Promise((resolve) => {
+      workoutCameraCanvas.toBlob(
+        resolve,
+        "image/jpeg",
+        0.82
+      );
+    });
+
+    if (!photoBlob) {
+      throw new Error("PHOTO_CREATION_FAILED");
+    }
+
+    clearCapturedWorkoutPhoto();
+
+    capturedWorkoutPhotoBlob = photoBlob;
+    workoutPhotoTakenAt = new Date();
+
+    workoutPhotoPreviewUrl =
+      URL.createObjectURL(photoBlob);
+
+    workoutPhotoPreview.src =
+      workoutPhotoPreviewUrl;
+
+    workoutPhotoDate.textContent =
+      new Intl.DateTimeFormat("ko-KR", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit"
+      }).format(workoutPhotoTakenAt);
+
+    stopWorkoutCamera();
+
+    workoutCameraView.hidden = true;
+    workoutPhotoComposer.hidden = false;
+
+    workoutPhotoCaption.focus();
+
+  } catch (photoError) {
+    console.error("사진 촬영 실패:", photoError);
+
+    workoutCameraMessage.hidden = false;
+    workoutCameraMessage.textContent =
+      "사진을 만들지 못했습니다. 다시 촬영해 주세요.";
+
+  } finally {
+    captureWorkoutPhotoButton.disabled = false;
+  }
+}
+
+// 다시 찍기
+async function retakeWorkoutPhoto() {
+  clearCapturedWorkoutPhoto();
+
+  workoutPhotoComposer.hidden = true;
+  workoutCameraView.hidden = false;
 
   await startWorkoutCamera();
 }
@@ -503,6 +650,15 @@ closeWorkoutCameraButton.addEventListener(
 switchWorkoutCameraButton.addEventListener(
   "click",
   switchWorkoutCamera
+);
+captureWorkoutPhotoButton.addEventListener(
+  "click",
+  captureWorkoutPhoto
+);
+
+retakeWorkoutPhotoButton.addEventListener(
+  "click",
+  retakeWorkoutPhoto
 );
 const loginForm = document.querySelector("#loginForm");
 const loginEmail = document.querySelector("#loginEmail");
