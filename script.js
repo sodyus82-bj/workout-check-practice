@@ -90,6 +90,17 @@ const memberTabPanels = {
   community: document.querySelector("#communityTabPanel")
 };
 
+// 회원 센터 커뮤니티 요소
+const communityPostList =
+  document.querySelector(
+    "#communityPostList"
+  );
+
+const communityStatusMessage =
+  document.querySelector(
+    "#communityStatusMessage"
+  );
+
 // 선택한 회원 탭 표시
 function showMemberTab(tabName) {
   const selectedPanel = memberTabPanels[tabName];
@@ -127,6 +138,244 @@ memberTabButtons.forEach((button) => {
     showMemberTab(button.dataset.memberTab);
   });
 });
+
+// 회원 화면에 센터 소식 표시
+function renderCommunityPosts(posts) {
+  communityPostList.innerHTML = "";
+
+  if (!posts || posts.length === 0) {
+    communityStatusMessage.textContent =
+      "아직 등록된 센터 소식이 없습니다.";
+
+    communityPostList.append(
+      communityStatusMessage
+    );
+
+    return;
+  }
+
+  posts.forEach(function (post) {
+    const postCard =
+      document.createElement("article");
+
+    postCard.className =
+      "community-post-card";
+
+    const imageCarousel =
+      document.createElement("div");
+
+    imageCarousel.className =
+      "community-image-carousel";
+
+    const postImages =
+      post.community_post_images || [];
+
+    postImages.forEach(
+      function (image, index) {
+        const imageSlide =
+          document.createElement("div");
+
+        imageSlide.className =
+          "community-image-slide";
+
+        const postImage =
+          document.createElement("img");
+
+        postImage.src = image.signedUrl;
+        postImage.alt =
+          image.alt_text ||
+          `${post.title} 이미지 ${index + 1}`;
+
+        imageSlide.append(postImage);
+        imageCarousel.append(imageSlide);
+      }
+    );
+
+    const postContent =
+      document.createElement("div");
+
+    postContent.className =
+      "community-post-content";
+
+    const postTitle =
+      document.createElement("h2");
+
+    postTitle.className =
+      "community-post-title";
+
+    postTitle.textContent = post.title;
+
+    const postBody =
+      document.createElement("p");
+
+    postBody.className =
+      "community-post-body";
+
+    appendTextWithLinks(
+      postBody,
+      post.body || ""
+    );
+
+    const postDate =
+      document.createElement("time");
+
+    postDate.className =
+      "community-post-date";
+
+    postDate.dateTime =
+      post.published_at || "";
+
+    postDate.textContent =
+      new Intl.DateTimeFormat(
+        "ko-KR",
+        {
+          year: "numeric",
+          month: "long",
+          day: "numeric"
+        }
+      ).format(
+        new Date(post.published_at)
+      );
+
+    postContent.append(
+      postTitle,
+      postBody
+    );
+
+    if (postImages.length > 1) {
+      const swipeGuide =
+        document.createElement("p");
+
+      swipeGuide.className =
+        "community-swipe-guide";
+
+      swipeGuide.textContent =
+        `사진 ${postImages.length}장 · 옆으로 넘겨보세요`;
+
+      postContent.append(swipeGuide);
+    }
+
+    postContent.append(postDate);
+
+    postCard.append(
+      imageCarousel,
+      postContent
+    );
+
+    communityPostList.append(postCard);
+  });
+}
+
+
+// 공개된 센터 소식 불러오기
+async function loadCommunityPosts() {
+  communityPostList.replaceChildren(
+    communityStatusMessage
+  );
+
+  communityStatusMessage.textContent =
+    "센터 소식을 불러오고 있습니다.";
+
+  try {
+    const {
+      data: posts,
+      error: postsError
+    } = await supabaseClient
+      .from("community_posts")
+      .select(`
+        id,
+        title,
+        body,
+        published_at,
+        community_post_images (
+          id,
+          storage_path,
+          alt_text,
+          sort_order
+        )
+      `)
+      .eq("is_published", true)
+      .order(
+        "published_at",
+        { ascending: false }
+      );
+
+    if (postsError) {
+      throw postsError;
+    }
+
+    const postsWithImages =
+      await Promise.all(
+        (posts || []).map(
+          async function (post) {
+            const sortedImages = [
+              ...(post.community_post_images || [])
+            ].sort(function (first, second) {
+              return (
+                first.sort_order -
+                second.sort_order
+              );
+            });
+
+            const imagesWithUrls =
+              await Promise.all(
+                sortedImages.map(
+                  async function (image) {
+                    const {
+                      data: signedImageData,
+                      error: signedImageError
+                    } =
+                      await supabaseClient.storage
+                        .from("community-images")
+                        .createSignedUrl(
+                          image.storage_path,
+                          3600
+                        );
+
+                    if (signedImageError) {
+                      throw signedImageError;
+                    }
+
+                    return {
+                      ...image,
+                      signedUrl:
+                        signedImageData.signedUrl
+                    };
+                  }
+                )
+              );
+
+            return {
+              ...post,
+              community_post_images:
+                imagesWithUrls
+            };
+          }
+        )
+      );
+
+    renderCommunityPosts(
+      postsWithImages
+    );
+
+  } catch (loadError) {
+    console.error(
+      "센터 소식 불러오기 실패:",
+      loadError
+    );
+
+    communityStatusMessage.textContent =
+      `센터 소식을 불러오지 못했습니다: ${
+        loadError.message ||
+        "알 수 없는 오류"
+      }`;
+
+    communityPostList.replaceChildren(
+      communityStatusMessage
+    );
+  }
+}
+
 // 운동 기록 캘린더 요소
 const workoutCalendarMonthLabel =
   document.querySelector("#workoutCalendarMonthLabel");
@@ -1940,7 +2189,8 @@ async function showWorkoutApp(userId) {
 
   await Promise.all([
     loadMemberRoutine(userId),
-    loadWorkoutRecords(userId)
+    loadWorkoutRecords(userId),
+    loadCommunityPosts()
   ]);
 }
 

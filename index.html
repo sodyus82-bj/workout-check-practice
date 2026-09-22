@@ -7,7 +7,7 @@
 
   <title>오늘의 운동 체크</title>
 
-  <link rel="stylesheet" href="style.css?v=10">
+  <link rel="stylesheet" href="style.css?v=11">
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#ec6a1a">
 
@@ -184,11 +184,18 @@
         <h1>센터와 함께<br>소통해 보세요</h1>
       </header>
 
-      <section class="community-placeholder">
-        <p>
-          센터 커뮤니티 기능을 준비하고 있습니다.
-        </p>
-      </section>
+      <section
+      id="communityPostList"
+      class="community-post-list"
+      aria-live="polite"
+    >
+      <p
+        id="communityStatusMessage"
+        class="community-status-message"
+      >
+        센터 소식을 불러오고 있습니다.
+      </p>
+    </section>
     </section>
     <img class="screen-logo screen-logo-bottom" src="images/center-logo.png" alt="헬스와 필라테스 화곡점">
     <nav class="member-bottom-nav" role="tablist" aria-label="회원 메뉴">
@@ -395,7 +402,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-  <script src="script.js?v=10"></script>
+  <script src="script.js?v=11"></script>
 </body>
 
 
