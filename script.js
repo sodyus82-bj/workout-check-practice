@@ -380,6 +380,9 @@ function clearCapturedWorkoutPhoto() {
   workoutPhotoCaption.value = "";
   workoutPhotoDate.textContent = "";
   workoutRecordSaveMessage.textContent = "";
+
+  saveWorkoutRecordButton.disabled = false;
+  saveWorkoutRecordButton.textContent = "기록 저장";
 }
 
 // 실행 중인 카메라 끄기
@@ -638,6 +641,121 @@ function retakeWorkoutPhoto() {
   workoutNativeCameraInput.value = "";
   workoutNativeCameraInput.click();
 }
+async function saveWorkoutRecord() {
+  if (
+    !capturedWorkoutPhotoBlob ||
+    !workoutPhotoTakenAt
+  ) {
+    workoutRecordSaveMessage.textContent =
+      "저장할 사진이 없습니다.";
+    return;
+  }
+
+  saveWorkoutRecordButton.disabled = true;
+  saveWorkoutRecordButton.textContent = "저장 중...";
+  workoutRecordSaveMessage.textContent =
+    "운동 기록을 저장하고 있습니다.";
+
+  let uploadedPhotoPath = "";
+
+  try {
+    const {
+      data: { user },
+      error: userError
+    } = await supabaseClient.auth.getUser();
+
+    if (userError || !user) {
+      throw new Error("로그인 정보를 확인할 수 없습니다.");
+    }
+
+    const photoMimeType =
+      capturedWorkoutPhotoBlob.type || "image/jpeg";
+
+    const extensionByMimeType = {
+      "image/png": "png",
+      "image/webp": "webp",
+      "image/heic": "heic",
+      "image/heif": "heif"
+    };
+
+    const photoExtension =
+      extensionByMimeType[photoMimeType] || "jpg";
+
+    const uniqueId =
+      typeof crypto.randomUUID === "function"
+        ? crypto.randomUUID()
+        : `${Date.now()}-${Math.random()
+            .toString(16)
+            .slice(2)}`;
+
+    uploadedPhotoPath =
+      `${user.id}/${Date.now()}-${uniqueId}.${photoExtension}`;
+
+    const { error: uploadError } =
+      await supabaseClient.storage
+        .from("workout-photos")
+        .upload(
+          uploadedPhotoPath,
+          capturedWorkoutPhotoBlob,
+          {
+            contentType: photoMimeType,
+            cacheControl: "3600",
+            upsert: false
+          }
+        );
+
+    if (uploadError) {
+      throw uploadError;
+    }
+
+    const { error: recordError } =
+      await supabaseClient
+        .from("workout_records")
+        .insert({
+          user_id: user.id,
+          photo_path: uploadedPhotoPath,
+          caption:
+            workoutPhotoCaption.value.trim(),
+          taken_at:
+            workoutPhotoTakenAt.toISOString()
+        });
+
+    if (recordError) {
+      const { error: cleanupError } =
+        await supabaseClient.storage
+          .from("workout-photos")
+          .remove([uploadedPhotoPath]);
+
+      if (cleanupError) {
+        console.error(
+          "저장 실패 사진 정리 오류:",
+          cleanupError
+        );
+      }
+
+      throw recordError;
+    }
+
+    workoutRecordSaveMessage.textContent =
+      "운동 기록을 저장했습니다.";
+
+    saveWorkoutRecordButton.textContent =
+      "저장 완료";
+
+  } catch (saveError) {
+    console.error(
+      "운동 기록 저장 실패:",
+      saveError
+    );
+
+    workoutRecordSaveMessage.textContent =
+      "운동 기록을 저장하지 못했습니다.";
+
+    saveWorkoutRecordButton.disabled = false;
+    saveWorkoutRecordButton.textContent =
+      "기록 저장";
+  }
+}
 
 // 카메라 버튼 기능 연결
 openWorkoutCameraButton.addEventListener(
@@ -706,6 +824,10 @@ captureWorkoutPhotoButton.addEventListener(
 retakeWorkoutPhotoButton.addEventListener(
   "click",
   retakeWorkoutPhoto
+);
+saveWorkoutRecordButton.addEventListener(
+  "click",
+  saveWorkoutRecord
 );
 const loginForm = document.querySelector("#loginForm");
 const loginEmail = document.querySelector("#loginEmail");
