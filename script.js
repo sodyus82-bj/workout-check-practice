@@ -139,6 +139,326 @@ memberTabButtons.forEach((button) => {
   });
 });
 
+// 센터 소식 이미지 캐러셀 만들기
+function createCommunityImageCarousel(
+  postImages,
+  postTitle
+) {
+  const carouselArea =
+    document.createElement("div");
+
+  carouselArea.className =
+    "community-carousel-area";
+
+  const imageCarousel =
+    document.createElement("div");
+
+  imageCarousel.className =
+    "community-image-carousel";
+
+  imageCarousel.setAttribute(
+    "aria-label",
+    `${postTitle} 이미지`
+  );
+
+  postImages.forEach(
+    function (image, index) {
+      const imageSlide =
+        document.createElement("div");
+
+      imageSlide.className =
+        "community-image-slide";
+
+      const postImage =
+        document.createElement("img");
+
+      postImage.src = image.signedUrl;
+      postImage.alt =
+        image.alt_text ||
+        `${postTitle} 이미지 ${index + 1}`;
+
+      postImage.draggable = false;
+
+      imageSlide.append(postImage);
+      imageCarousel.append(imageSlide);
+    }
+  );
+
+  carouselArea.append(imageCarousel);
+
+  // 이미지가 한 장이면 조작 버튼을 만들지 않음
+  if (postImages.length <= 1) {
+    return carouselArea;
+  }
+
+  imageCarousel.classList.add(
+    "has-multiple-images"
+  );
+
+  const carouselControls =
+    document.createElement("div");
+
+  carouselControls.className =
+    "community-carousel-controls";
+
+  const previousButton =
+    document.createElement("button");
+
+  previousButton.type = "button";
+  previousButton.className =
+    "community-carousel-button";
+  previousButton.textContent = "‹";
+  previousButton.setAttribute(
+    "aria-label",
+    "이전 사진 보기"
+  );
+
+  const dotContainer =
+    document.createElement("div");
+
+  dotContainer.className =
+    "community-carousel-dots";
+
+  const nextButton =
+    document.createElement("button");
+
+  nextButton.type = "button";
+  nextButton.className =
+    "community-carousel-button";
+  nextButton.textContent = "›";
+  nextButton.setAttribute(
+    "aria-label",
+    "다음 사진 보기"
+  );
+
+  const indicatorDots =
+    postImages.map(
+      function (_, index) {
+        const dot =
+          document.createElement("button");
+
+        dot.type = "button";
+        dot.className =
+          "community-carousel-dot";
+
+        dot.setAttribute(
+          "aria-label",
+          `${index + 1}번 사진 보기`
+        );
+
+        dotContainer.append(dot);
+
+        return dot;
+      }
+    );
+
+  let currentSlideIndex = 0;
+
+  function updateCarouselControls(index) {
+    currentSlideIndex = Math.max(
+      0,
+      Math.min(
+        index,
+        postImages.length - 1
+      )
+    );
+
+    previousButton.disabled =
+      currentSlideIndex === 0;
+
+    nextButton.disabled =
+      currentSlideIndex ===
+      postImages.length - 1;
+
+    indicatorDots.forEach(
+      function (dot, dotIndex) {
+        const isCurrent =
+          dotIndex === currentSlideIndex;
+
+        dot.classList.toggle(
+          "is-active",
+          isCurrent
+        );
+
+        dot.setAttribute(
+          "aria-current",
+          isCurrent ? "true" : "false"
+        );
+      }
+    );
+  }
+
+  function moveToSlide(index) {
+    const nextIndex = Math.max(
+      0,
+      Math.min(
+        index,
+        postImages.length - 1
+      )
+    );
+
+    imageCarousel.scrollTo({
+      left:
+        imageCarousel.clientWidth *
+        nextIndex,
+      behavior: "smooth"
+    });
+
+    updateCarouselControls(nextIndex);
+  }
+
+  previousButton.addEventListener(
+    "click",
+    function () {
+      moveToSlide(
+        currentSlideIndex - 1
+      );
+    }
+  );
+
+  nextButton.addEventListener(
+    "click",
+    function () {
+      moveToSlide(
+        currentSlideIndex + 1
+      );
+    }
+  );
+
+  indicatorDots.forEach(
+    function (dot, index) {
+      dot.addEventListener(
+        "click",
+        function () {
+          moveToSlide(index);
+        }
+      );
+    }
+  );
+
+  // 손가락으로 넘겼을 때 점 표시 변경
+  imageCarousel.addEventListener(
+    "scroll",
+    function () {
+      if (!imageCarousel.clientWidth) {
+        return;
+      }
+
+      const visibleIndex = Math.round(
+        imageCarousel.scrollLeft /
+        imageCarousel.clientWidth
+      );
+
+      updateCarouselControls(
+        visibleIndex
+      );
+    }
+  );
+
+  // PC 마우스 드래그 지원
+  let isMouseDragging = false;
+  let dragStartX = 0;
+  let dragStartScrollLeft = 0;
+
+  imageCarousel.addEventListener(
+    "pointerdown",
+    function (event) {
+      if (
+        event.pointerType !== "mouse" ||
+        event.button !== 0
+      ) {
+        return;
+      }
+
+      isMouseDragging = true;
+      dragStartX = event.clientX;
+      dragStartScrollLeft =
+        imageCarousel.scrollLeft;
+
+      imageCarousel.classList.add(
+        "is-dragging"
+      );
+
+      imageCarousel.setPointerCapture(
+        event.pointerId
+      );
+
+      event.preventDefault();
+    }
+  );
+
+  imageCarousel.addEventListener(
+    "pointermove",
+    function (event) {
+      if (!isMouseDragging) {
+        return;
+      }
+
+      const movedDistance =
+        event.clientX - dragStartX;
+
+      imageCarousel.scrollLeft =
+        dragStartScrollLeft -
+        movedDistance;
+
+      event.preventDefault();
+    }
+  );
+
+  function finishMouseDrag(event) {
+    if (!isMouseDragging) {
+      return;
+    }
+
+    isMouseDragging = false;
+
+    imageCarousel.classList.remove(
+      "is-dragging"
+    );
+
+    const nearestIndex = Math.round(
+      imageCarousel.scrollLeft /
+      imageCarousel.clientWidth
+    );
+
+    moveToSlide(nearestIndex);
+
+    if (
+      imageCarousel.hasPointerCapture(
+        event.pointerId
+      )
+    ) {
+      imageCarousel.releasePointerCapture(
+        event.pointerId
+      );
+    }
+  }
+
+  imageCarousel.addEventListener(
+    "pointerup",
+    finishMouseDrag
+  );
+
+  imageCarousel.addEventListener(
+    "pointercancel",
+    finishMouseDrag
+  );
+
+  carouselControls.append(
+    previousButton,
+    dotContainer,
+    nextButton
+  );
+
+  carouselArea.append(
+    carouselControls
+  );
+
+  updateCarouselControls(0);
+
+  return carouselArea;
+}
+
 // 회원 화면에 센터 소식 표시
 function renderCommunityPosts(posts) {
   communityPostList.innerHTML = "";
@@ -161,35 +481,14 @@ function renderCommunityPosts(posts) {
     postCard.className =
       "community-post-card";
 
-    const imageCarousel =
-      document.createElement("div");
-
-    imageCarousel.className =
-      "community-image-carousel";
-
-    const postImages =
+      const postImages =
       post.community_post_images || [];
-
-    postImages.forEach(
-      function (image, index) {
-        const imageSlide =
-          document.createElement("div");
-
-        imageSlide.className =
-          "community-image-slide";
-
-        const postImage =
-          document.createElement("img");
-
-        postImage.src = image.signedUrl;
-        postImage.alt =
-          image.alt_text ||
-          `${post.title} 이미지 ${index + 1}`;
-
-        imageSlide.append(postImage);
-        imageCarousel.append(imageSlide);
-      }
-    );
+    
+    const imageCarousel =
+      createCommunityImageCarousel(
+        postImages,
+        post.title
+      );
 
     const postContent =
       document.createElement("div");

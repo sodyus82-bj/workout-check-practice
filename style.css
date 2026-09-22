@@ -1262,6 +1262,102 @@ body {
   display: none;
 }
 
+/* 캐러셀 전체 영역 */
+.community-carousel-area {
+  background-color: var(--brand-white);
+}
+
+/* 사진이 여러 장일 때 PC 드래그 표시 */
+.community-image-carousel.has-multiple-images {
+  cursor: grab;
+}
+
+.community-image-carousel.is-dragging {
+  cursor: grabbing;
+  scroll-behavior: auto;
+  scroll-snap-type: none;
+  user-select: none;
+}
+
+.community-image-carousel img {
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+/* 캐러셀 화살표와 점 */
+.community-carousel-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 15px;
+  padding: 10px 14px;
+  background-color: var(--brand-white);
+  border-top: 1px solid #edf0f4;
+  border-bottom: 1px solid #edf0f4;
+}
+
+/* 이전·다음 버튼 */
+.community-carousel-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 32px;
+  padding: 0;
+  color: var(--brand-navy);
+  background-color: #f5f7fa;
+  border: 1px solid #d8dee8;
+  border-radius: 50%;
+  font: inherit;
+  font-size: 25px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.community-carousel-button:active {
+  color: var(--brand-white);
+  background-color: var(--brand-orange);
+  border-color: var(--brand-orange);
+}
+
+.community-carousel-button:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+/* 현재 사진 위치를 보여주는 점 */
+.community-carousel-dots {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 50px;
+}
+
+.community-carousel-dot {
+  width: 8px;
+  height: 8px;
+  padding: 0;
+  background-color: #c7ced9;
+  border: 0;
+  border-radius: 999px;
+  cursor: pointer;
+  transition:
+    width 0.2s ease,
+    background-color 0.2s ease;
+}
+
+.community-carousel-dot.is-active {
+  width: 22px;
+  background-color: var(--brand-orange);
+}
+
+.community-carousel-button:focus-visible,
+.community-carousel-dot:focus-visible {
+  outline: 3px solid rgba(245, 106, 0, 0.25);
+  outline-offset: 2px;
+}
+
 /* 이미지 한 장의 영역 */
 .community-image-slide {
   flex: 0 0 100%;
