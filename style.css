@@ -136,7 +136,7 @@ body {
   height: auto;
 }
 
-/* 루틴표 크게 보기 버튼 */
+/* 관리자 로그아웃 버튼 */
 .zoom-button {
   width: 100%;
   margin: 0 0 28px;
@@ -157,62 +157,7 @@ body {
   border-color: #bfff32;
 }
 
-/* 루틴 이미지에 확대용 마우스 표시 */
-#routineImage {
-  cursor: zoom-in;
-}
 
-/* 화면 전체를 덮는 확대 영역 */
-.image-modal {
-  position: fixed;
-  inset: 0;
-  z-index: 1000;
-  display: none;
-  align-items: flex-start;
-  justify-content: center;
-  padding: 70px 16px 30px;
-  overflow-y: auto;
-  background-color: rgba(0, 0, 0, 0.9);
-}
-
-/* JavaScript가 open을 붙이면 확대 영역 표시 */
-.image-modal.open {
-  display: flex;
-}
-
-/* 확대된 루틴 이미지 */
-.image-modal img {
-  display: block;
-  width: 100%;
-  max-width: 900px;
-  height: auto;
-  background-color: #ffffff;
-  border: 2px solid #596273;
-  border-radius: 18px;
-}
-
-/* 확대 화면 닫기 버튼 */
-.close-image-button {
-  position: fixed;
-  top: 16px;
-  right: 16px;
-  z-index: 1001;
-  width: 46px;
-  height: 46px;
-  padding: 0;
-  color: #ffffff;
-  background-color: #171b24;
-  border: 1px solid #596273;
-  border-radius: 50%;
-  font-size: 30px;
-  line-height: 1;
-  cursor: pointer;
-}
-
-/* 확대 중에는 원래 화면이 움직이지 않도록 설정 */
-body.modal-open {
-  overflow: hidden;
-}
 
 /* =================================
    헬스와 필라테스 브랜드 테마
@@ -268,7 +213,7 @@ body {
   box-shadow: 0 8px 24px rgba(23, 35, 62, 0.1);
 }
 
-/* 크게 보기 버튼 */
+/* 관리자 로그아웃 버튼 브랜드 색상 */
 .zoom-button {
   color: var(--brand-orange);
   background-color: var(--brand-white);
@@ -326,12 +271,6 @@ body {
   border-color: var(--brand-border);
 }
 
-/* 확대 화면 닫기 버튼 */
-.close-image-button {
-  color: var(--brand-white);
-  background-color: var(--brand-orange);
-  border-color: var(--brand-white);
-}
 
 /* 홈 화면 설치 버튼 */
 .install-button {

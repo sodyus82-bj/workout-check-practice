@@ -7,7 +7,7 @@
 
   <title>오늘의 운동 체크</title>
 
-  <link rel="stylesheet" href="style.css?v=8">
+  <link rel="stylesheet" href="style.css?v=9">
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#ec6a1a">
 
@@ -117,9 +117,6 @@
       <button id="toggleRoutineDescriptionButton" class="toggle-description-button" type="button" hidden
         aria-expanded="false">
         설명 더 보기
-      </button>
-      <button id="openImageButton" class="zoom-button" type="button">
-        🔍 루틴표 크게 보기
       </button>
 
       <button id="installButton" class="install-button" type="button" hidden>
@@ -328,16 +325,10 @@
       <canvas id="workoutCameraCanvas" hidden></canvas>
     </section>
   </div>
-  <div id="imageModal" class="image-modal">
-    <button id="closeImageButton" class="close-image-button" type="button" aria-label="크게 보기 닫기">
-      ×
-    </button>
 
-    <img src="images/routine-guide.png" alt="확대된 월간 운동 루틴 안내표">
-  </div>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-  <script src="script.js?v=8"></script>
+  <script src="script.js?v=9"></script>
 </body>
 
 

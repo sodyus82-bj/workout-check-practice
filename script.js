@@ -6,45 +6,7 @@ const supabaseClient = window.supabase.createClient(
   SUPABASE_PUBLISHABLE_KEY
 );
 
-// 이미지 크게 보기에 필요한 요소
 const routineImage = document.querySelector("#routineImage");
-const openImageButton = document.querySelector("#openImageButton");
-const imageModal = document.querySelector("#imageModal");
-const closeImageButton = document.querySelector("#closeImageButton");
-
-
-// 확대 화면 열기
-function openImageModal() {
-  imageModal.classList.add("open");
-  document.body.classList.add("modal-open");
-}
-
-// 확대 화면 닫기
-function closeImageModal() {
-  imageModal.classList.remove("open");
-  document.body.classList.remove("modal-open");
-}
-
-// 원본 이미지와 크게 보기 버튼에 열기 기능 연결
-routineImage.addEventListener("click", openImageModal);
-openImageButton.addEventListener("click", openImageModal);
-
-// X 버튼에 닫기 기능 연결
-closeImageButton.addEventListener("click", closeImageModal);
-
-// 이미지 바깥의 어두운 영역을 누르면 닫기
-imageModal.addEventListener("click", function (event) {
-  if (event.target === imageModal) {
-    closeImageModal();
-  }
-});
-
-// 키보드의 ESC를 누르면 닫기
-document.addEventListener("keydown", function (event) {
-  if (event.key === "Escape") {
-    closeImageModal();
-  }
-});
 if (
   "serviceWorker" in navigator &&
   window.location.protocol !== "file:"
@@ -1428,15 +1390,11 @@ function renderRoutineDescription(description) {
 }
 // 회원에게 배정된 최신 루틴 불러오기
 async function loadMemberRoutine(userId) {
-  const routineElements = [
-    routineImage.closest(".routine-image"),
-    openImageButton
-  ];
+  const routineElement =
+  routineImage.closest(".routine-image");
 
-  routineElements.forEach((element) => {
-    element.hidden = true;
-    routineDescription.hidden = true;
-  });
+routineElement.hidden = true;
+routineDescription.hidden = true;
 
   const { data, error } = await supabaseClient
     .from("member_routines")
@@ -1485,12 +1443,8 @@ async function loadMemberRoutine(userId) {
   routineImage.src = imageUrl;
   routineImage.alt = data.routine_name;
 
-  imageModal.querySelector("img").src = imageUrl;
-  imageModal.querySelector("img").alt = `${data.routine_name} 확대 이미지`;
 
-  routineElements.forEach((element) => {
-    element.hidden = false;
-  });
+  routineElement.hidden = false;
 }
 
 // 일반 회원 화면 표시
