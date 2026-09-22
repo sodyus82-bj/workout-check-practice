@@ -992,3 +992,260 @@ body {
   margin: 0;
   line-height: 1.7;
 }
+/* 운동 기록 카메라 전체 화면 */
+.workout-camera-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+
+  display: flex;
+  justify-content: center;
+
+  overflow-y: auto;
+  background-color: rgba(5, 8, 14, 0.96);
+}
+
+.workout-camera-modal[hidden] {
+  display: none !important;
+}
+
+/* 카메라 내부 화면 */
+.workout-camera-dialog {
+  width: 100%;
+  max-width: 430px;
+  min-height: 100dvh;
+  padding:
+    calc(18px + env(safe-area-inset-top))
+    16px
+    calc(20px + env(safe-area-inset-bottom));
+
+  color: var(--brand-white);
+  background-color: #0b0f17;
+}
+
+/* 카메라 상단 제목과 취소 버튼 */
+.workout-camera-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.workout-camera-header h2 {
+  margin: 0;
+  font-size: 19px;
+}
+
+.camera-text-button {
+  flex-shrink: 0;
+  padding: 8px 4px;
+  color: #ffffff;
+  background-color: transparent;
+  border: 0;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* 실시간 카메라 영역 */
+.workout-camera-screen {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  overflow: hidden;
+  background-color: #000000;
+  border: 1px solid #283144;
+  border-radius: 22px;
+}
+
+/* 실시간 카메라 영상 */
+#workoutCameraVideo {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* 전면 카메라일 때 거울처럼 표시 */
+#workoutCameraVideo.is-front-facing {
+  transform: scaleX(-1);
+}
+
+/* 카메라 준비 및 오류 안내 */
+.workout-camera-message {
+  position: absolute;
+  inset: 0;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  margin: 0;
+  padding: 28px;
+  color: #ffffff;
+  background-color: rgba(0, 0, 0, 0.55);
+
+  font-size: 14px;
+  line-height: 1.6;
+  text-align: center;
+}
+
+/* 촬영 버튼 영역 */
+.workout-camera-controls {
+  display: grid;
+  grid-template-columns: 1fr 76px 1fr;
+  align-items: center;
+  gap: 16px;
+  margin-top: 20px;
+}
+
+/* 원형 촬영 버튼 */
+.camera-shutter-button {
+  display: grid;
+  place-items: center;
+  width: 76px;
+  height: 76px;
+  padding: 5px;
+  background-color: transparent;
+  border: 3px solid #ffffff;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.camera-shutter-button span {
+  display: block;
+  width: 58px;
+  height: 58px;
+  background-color: #ffffff;
+  border-radius: 50%;
+}
+
+.camera-shutter-button:active span {
+  background-color: var(--brand-orange);
+  transform: scale(0.9);
+}
+
+/* 전면·후면 카메라 전환 버튼 */
+.camera-switch-button {
+  justify-self: end;
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  padding: 0;
+  color: #ffffff;
+  background-color: #242c3b;
+  border: 1px solid #3d4658;
+  border-radius: 50%;
+  font-size: 21px;
+  cursor: pointer;
+}
+
+/* 폴라로이드 작성 영역 */
+#workoutPhotoComposer {
+  padding-top: 4px;
+}
+
+/* 폴라로이드 프레임 */
+.polaroid-composer {
+  width: 100%;
+  margin: 0 auto 20px;
+  padding: 14px 14px 22px;
+  color: var(--brand-navy);
+  background-color: #fffdf8;
+  border-radius: 3px;
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.35);
+}
+
+/* 촬영한 사진 */
+#workoutPhotoPreview {
+  display: block;
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  margin-bottom: 12px;
+  object-fit: cover;
+  background-color: #e7e9ed;
+}
+
+/* 폴라로이드 메모 */
+#workoutPhotoCaption {
+  display: block;
+  width: 100%;
+  min-height: 78px;
+  padding: 8px 6px;
+  color: #25304a;
+  background-color: transparent;
+  border: 0;
+  border-bottom: 1px solid #e1ddd4;
+  outline: none;
+  resize: none;
+
+  font-family:
+    "Nanum Pen Script",
+    "Apple SD Gothic Neo",
+    "Malgun Gothic",
+    cursive;
+  font-size: 18px;
+  line-height: 1.6;
+}
+
+/* 촬영 날짜 */
+#workoutPhotoDate {
+  display: block;
+  margin-top: 12px;
+  color: #858070;
+  font-size: 13px;
+  text-align: right;
+}
+
+/* 다시 찍기·저장 버튼 */
+.workout-photo-actions {
+  display: grid;
+  grid-template-columns: 1fr 1.4fr;
+  gap: 10px;
+}
+
+.retake-photo-button,
+.save-workout-record-button {
+  min-height: 52px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.retake-photo-button {
+  color: #ffffff;
+  background-color: #242c3b;
+  border: 1px solid #414b5e;
+}
+
+.save-workout-record-button {
+  color: #ffffff;
+  background-color: var(--brand-orange);
+  border: 1px solid var(--brand-orange);
+}
+
+.save-workout-record-button:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+/* 사진 저장 안내 메시지 */
+.workout-record-save-message {
+  min-height: 22px;
+  margin: 12px 0 0;
+  color: #ffd3b3;
+  font-size: 13px;
+  line-height: 1.5;
+  text-align: center;
+}
+
+/* 카메라가 열렸을 때 뒤 화면 스크롤 방지 */
+body.camera-open {
+  overflow: hidden;
+}

@@ -307,6 +307,203 @@ function resetWorkoutCalendar() {
 
 // 페이지가 처음 열렸을 때 달력 표시
 renderWorkoutCalendar();
+// 운동 기록 카메라 요소
+const openWorkoutCameraButton =
+  document.querySelector("#openWorkoutCameraButton");
+
+const workoutCameraModal =
+  document.querySelector("#workoutCameraModal");
+
+const closeWorkoutCameraButton =
+  document.querySelector("#closeWorkoutCameraButton");
+
+const workoutCameraView =
+  document.querySelector("#workoutCameraView");
+
+const workoutCameraVideo =
+  document.querySelector("#workoutCameraVideo");
+
+const workoutCameraMessage =
+  document.querySelector("#workoutCameraMessage");
+
+const captureWorkoutPhotoButton =
+  document.querySelector("#captureWorkoutPhotoButton");
+
+const switchWorkoutCameraButton =
+  document.querySelector("#switchWorkoutCameraButton");
+
+const workoutPhotoComposer =
+  document.querySelector("#workoutPhotoComposer");
+
+const workoutPhotoCaption =
+  document.querySelector("#workoutPhotoCaption");
+
+const workoutRecordSaveMessage =
+  document.querySelector("#workoutRecordSaveMessage");
+
+// 현재 실행 중인 카메라 정보
+let workoutCameraStream = null;
+let workoutCameraFacingMode = "user";
+let workoutCameraRequestId = 0;
+
+// 실행 중인 카메라 끄기
+function stopWorkoutCamera() {
+  workoutCameraRequestId += 1;
+
+  if (workoutCameraStream) {
+    workoutCameraStream
+      .getTracks()
+      .forEach((track) => track.stop());
+  }
+
+  workoutCameraStream = null;
+  workoutCameraVideo.srcObject = null;
+}
+
+// 카메라 시작
+async function startWorkoutCamera() {
+  stopWorkoutCamera();
+
+  const currentRequestId = workoutCameraRequestId;
+
+  workoutCameraMessage.hidden = false;
+  workoutCameraMessage.textContent =
+    "카메라를 준비하고 있습니다.";
+
+  captureWorkoutPhotoButton.disabled = true;
+  switchWorkoutCameraButton.disabled = true;
+
+  workoutCameraVideo.classList.toggle(
+    "is-front-facing",
+    workoutCameraFacingMode === "user"
+  );
+
+  try {
+    if (
+      !navigator.mediaDevices ||
+      !navigator.mediaDevices.getUserMedia
+    ) {
+      throw new Error("CAMERA_NOT_SUPPORTED");
+    }
+
+    const cameraStream =
+      await navigator.mediaDevices.getUserMedia({
+        audio: false,
+        video: {
+          facingMode: {
+            ideal: workoutCameraFacingMode
+          },
+          width: {
+            ideal: 1600
+          },
+          height: {
+            ideal: 2000
+          }
+        }
+      });
+
+    // 기다리는 동안 화면을 닫았거나 다른 카메라로 바꾼 경우
+    if (
+      currentRequestId !== workoutCameraRequestId ||
+      workoutCameraModal.hidden
+    ) {
+      cameraStream
+        .getTracks()
+        .forEach((track) => track.stop());
+
+      return;
+    }
+
+    workoutCameraStream = cameraStream;
+    workoutCameraVideo.srcObject = cameraStream;
+
+    await workoutCameraVideo.play();
+
+    workoutCameraMessage.hidden = true;
+    captureWorkoutPhotoButton.disabled = false;
+
+  } catch (cameraError) {
+    console.error("카메라 실행 실패:", cameraError);
+
+    workoutCameraMessage.hidden = false;
+
+    if (cameraError.name === "NotAllowedError") {
+      workoutCameraMessage.textContent =
+        "카메라 권한이 필요합니다. " +
+        "브라우저 설정에서 카메라 사용을 허용해 주세요.";
+
+    } else if (cameraError.name === "NotFoundError") {
+      workoutCameraMessage.textContent =
+        "사용할 수 있는 카메라를 찾지 못했습니다.";
+
+    } else if (window.location.protocol === "file:") {
+      workoutCameraMessage.textContent =
+        "로컬 파일에서는 카메라가 제한될 수 있습니다. " +
+        "GitHub Pages에 올린 앱에서 다시 확인해 주세요.";
+
+    } else {
+      workoutCameraMessage.textContent =
+        "카메라를 실행하지 못했습니다. " +
+        "잠시 후 다시 시도해 주세요.";
+    }
+
+  } finally {
+    switchWorkoutCameraButton.disabled = false;
+  }
+}
+
+// 카메라 화면 열기
+async function openWorkoutCamera() {
+  workoutCameraModal.hidden = false;
+  workoutCameraView.hidden = false;
+  workoutPhotoComposer.hidden = true;
+
+  workoutPhotoCaption.value = "";
+  workoutRecordSaveMessage.textContent = "";
+
+  document.body.classList.add("camera-open");
+
+  workoutCameraFacingMode = "user";
+
+  await startWorkoutCamera();
+}
+
+// 카메라 화면 닫기
+function closeWorkoutCamera() {
+  stopWorkoutCamera();
+
+  workoutCameraModal.hidden = true;
+  workoutCameraView.hidden = false;
+  workoutPhotoComposer.hidden = true;
+
+  document.body.classList.remove("camera-open");
+}
+
+// 전면·후면 카메라 전환
+async function switchWorkoutCamera() {
+  workoutCameraFacingMode =
+    workoutCameraFacingMode === "user"
+      ? "environment"
+      : "user";
+
+  await startWorkoutCamera();
+}
+
+// 카메라 버튼 기능 연결
+openWorkoutCameraButton.addEventListener(
+  "click",
+  openWorkoutCamera
+);
+
+closeWorkoutCameraButton.addEventListener(
+  "click",
+  closeWorkoutCamera
+);
+
+switchWorkoutCameraButton.addEventListener(
+  "click",
+  switchWorkoutCamera
+);
 const loginForm = document.querySelector("#loginForm");
 const loginEmail = document.querySelector("#loginEmail");
 const loginPassword = document.querySelector("#loginPassword");
