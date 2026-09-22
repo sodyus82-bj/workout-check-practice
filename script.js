@@ -365,9 +365,18 @@ adminMemberSelect.addEventListener("change", function () {
   const selectedOption =
     adminMemberSelect.options[adminMemberSelect.selectedIndex];
 
+  // 다른 회원의 입력 내용이 남지 않도록 초기화
+  adminRoutineName.value = "";
+  adminRoutineImage.value = "";
+  adminRoutineDescription.value = "";
+  adminRoutinePreview.hidden = true;
+  adminRoutinePreview.removeAttribute("src");
+  adminSaveMessage.textContent = "";
+
   if (!adminMemberSelect.value) {
     adminRoutineEditor.hidden = true;
-    adminMemberInfo.textContent = "루틴을 관리할 회원을 선택해 주세요.";
+    adminMemberInfo.textContent =
+      "루틴을 관리할 회원을 선택해 주세요.";
     return;
   }
 
@@ -451,23 +460,29 @@ saveAdminRoutineButton.addEventListener("click", async function () {
     .select("id")
     .single();
 
-  if (insertError) {
-    console.error("루틴 정보 저장 실패:", insertError);
-    adminSaveMessage.textContent = "루틴 정보를 저장하지 못했습니다.";
-    saveAdminRoutineButton.disabled = false;
-    return;
-  }
+    if (insertError) {
+      console.error("루틴 정보 저장 실패:", insertError);
+    
+      // 데이터 저장에 실패했으므로 방금 업로드한 이미지를 삭제
+      const { error: cleanupError } = await supabaseClient.storage
+        .from("routine-images")
+        .remove([imagePath]);
+    
+      if (cleanupError) {
+        console.error(
+          "저장 실패 이미지 정리 실패:",
+          cleanupError
+        );
+      }
+    
+      adminSaveMessage.textContent =
+        "루틴 정보를 저장하지 못했습니다.";
+    
+      saveAdminRoutineButton.disabled = false;
+      return;
+    }
 
-  const { error: deactivateError } = await supabaseClient
-    .from("member_routines")
-    .update({ is_active: false })
-    .eq("user_id", userId)
-    .eq("is_active", true)
-    .neq("id", newRoutine.id);
 
-  if (deactivateError) {
-    console.error("기존 루틴 비활성화 실패:", deactivateError);
-  }
 
   adminSaveMessage.textContent =
     "저장했습니다. 회원이 다시 로그인하면 새 루틴이 표시됩니다.";
@@ -521,10 +536,42 @@ async function handleLogout() {
     return;
   }
 
+  // 회원·관리자 화면을 숨기고 로그인 화면 표시
   appScreen.hidden = true;
   adminScreen.hidden = true;
   loginScreen.hidden = false;
+
+  // 회원가입 화면이 열려 있었다면 기본 로그인 화면으로 복구
+  signupForm.hidden = true;
+  loginForm.hidden = false;
+  showSignupButton.hidden = false;
+
+  // 입력값과 안내 메시지 초기화
+  loginForm.reset();
+  signupForm.reset();
   loginMessage.textContent = "";
+  signupMessage.textContent = "";
+
+  // 버튼 상태 초기화
+  loginButton.disabled = false;
+  signupButton.disabled = false;
+
+  // 비밀번호 입력창과 눈 버튼 초기화
+  document
+    .querySelectorAll("[data-password-toggle]")
+    .forEach((button) => {
+      const passwordInput = document.querySelector(
+        `#${button.dataset.passwordToggle}`
+      );
+
+      if (passwordInput) {
+        passwordInput.type = "password";
+      }
+
+      button.textContent = "👁";
+      button.setAttribute("aria-label", "비밀번호 보기");
+      button.setAttribute("aria-pressed", "false");
+    });
 }
 
 logoutButton.addEventListener("click", handleLogout);
