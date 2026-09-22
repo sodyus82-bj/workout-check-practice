@@ -140,8 +140,11 @@ const toggleRoutineDescriptionButton = document.querySelector(
 );
 const logoutButton = document.querySelector("#logoutButton");
 
+const adminMemberSearch = document.querySelector("#adminMemberSearch");
 const adminMemberSelect = document.querySelector("#adminMemberSelect");
 const adminMemberInfo = document.querySelector("#adminMemberInfo");
+
+let adminMemberOptionCache = [];
 const adminRoutineEditor = document.querySelector("#adminRoutineEditor");
 const adminLogoutButton = document.querySelector("#adminLogoutButton");
 const adminRoutineName = document.querySelector("#adminRoutineName");
@@ -252,7 +255,7 @@ async function loadMemberRoutine(userId) {
   }
 
   assignedRoutineName.textContent = data.routine_name;
-    renderRoutineDescription(data.routine_description);
+  renderRoutineDescription(data.routine_description);
   routineImage.src = imageUrl;
   routineImage.alt = data.routine_name;
 
@@ -275,43 +278,147 @@ async function showWorkoutApp(userId) {
 
 // 관리자용 회원 목록 불러오기
 async function loadAdminMembers() {
-  const { data, error } = await supabaseClient
+  const [
+    { data: members, error: membersError },
+    { data: routines, error: routinesError }
+  ] = await Promise.all([
+    supabaseClient
     .from("profiles")
-    .select("id, display_name, email, phone_last4")
+    .select("id, display_name, email, phone_last4, created_at")
     .eq("role", "member")
-    .order("email");
+    .order("created_at", { ascending: false }),
 
-  if (error) {
-    console.error("회원 목록 불러오기 실패:", error);
+    supabaseClient
+      .from("member_routines")
+      .select(
+        "user_id, routine_name, routine_image_path, is_active, assigned_at"
+      )
+      .order("assigned_at", { ascending: false })
+  ]);
+
+  if (membersError || routinesError) {
+    console.error(
+      "관리자 회원 정보 불러오기 실패:",
+      membersError || routinesError
+    );
+
     adminMemberSelect.innerHTML =
       '<option value="">회원 목록을 불러오지 못했습니다.</option>';
+
     return;
   }
 
-  if (!data || data.length === 0) {
+  if (!members || members.length === 0) {
     adminMemberSelect.innerHTML =
       '<option value="">등록된 회원이 없습니다.</option>';
+
     return;
   }
+
+  const routineSummaryByUser = new Map();
+
+  (routines || []).forEach((routine) => {
+    const summary = routineSummaryByUser.get(routine.user_id) || {
+      assignmentCount: 0,
+      currentRoutineName: "",
+      currentRoutineImagePath: ""
+    };
+
+    summary.assignmentCount += 1;
+
+    if (routine.is_active && !summary.currentRoutineName) {
+      summary.currentRoutineName = routine.routine_name;
+      summary.currentRoutineImagePath =
+        routine.routine_image_path || "";
+    }
+
+    routineSummaryByUser.set(routine.user_id, summary);
+  });
 
   adminMemberSelect.innerHTML =
     '<option value="">루틴을 관리할 회원을 선택하세요.</option>';
 
-    data.forEach((member) => {
-      const option = document.createElement("option");
-      const memberName = member.display_name || "이름 없음";
-      const phoneText = member.phone_last4
-        ? ` · ${member.phone_last4}`
-        : "";
-    
-      option.value = member.id;
-      option.textContent =
-        `${memberName}${phoneText} (${member.email})`;
-    
+  members.forEach((member) => {
+    const option = document.createElement("option");
+    const memberName = member.display_name || "이름 없음";
+    const phoneText = member.phone_last4
+      ? ` · ${member.phone_last4}`
+      : "";
+
+    const summary = routineSummaryByUser.get(member.id) || {
+      assignmentCount: 0,
+      currentRoutineName: "",
+      currentRoutineImagePath: ""
+    };
+
+    const routineStatus = summary.currentRoutineName
+      ? "루틴 있음"
+      : "루틴 없음";
+
+    option.value = member.id;
+    option.dataset.memberName = memberName;
+    option.dataset.email = member.email || "";
+    option.dataset.assignmentCount = String(summary.assignmentCount);
+    option.dataset.currentRoutineName = summary.currentRoutineName;
+    option.dataset.currentRoutineImagePath =
+      summary.currentRoutineImagePath;
+    option.textContent =
+      `${memberName}${phoneText} · ` +
+      `${summary.assignmentCount}회 배정 · ${routineStatus}`;
+
       adminMemberSelect.append(option);
     });
-}
+  
+    adminMemberOptionCache = Array.from(
+      adminMemberSelect.options
+    )
+      .slice(1)
+      .map((option) => option.cloneNode(true));
+  }
+// 관리자 회원 검색
+adminMemberSearch.addEventListener("input", function () {
+  const searchText =
+    adminMemberSearch.value.trim().toLowerCase();
 
+  const matchingOptions = adminMemberOptionCache.filter(
+    (option) => {
+      const optionText =
+        option.textContent.toLowerCase();
+
+      const email =
+        (option.dataset.email || "").toLowerCase();
+
+      return `${optionText} ${email}`.includes(searchText);
+    }
+  );
+
+  adminMemberSelect.innerHTML =
+    '<option value="">루틴을 관리할 회원을 선택하세요.</option>';
+
+  if (matchingOptions.length === 0) {
+    const noResultOption =
+      document.createElement("option");
+
+    noResultOption.value = "";
+    noResultOption.textContent =
+      "일치하는 회원이 없습니다.";
+    noResultOption.disabled = true;
+
+    adminMemberSelect.append(noResultOption);
+  } else {
+    matchingOptions.forEach((option) => {
+      adminMemberSelect.append(
+        option.cloneNode(true)
+      );
+    });
+  }
+
+  adminMemberSelect.value = "";
+
+  adminMemberSelect.dispatchEvent(
+    new Event("change")
+  );
+});
 // 관리자 화면 표시
 async function showAdminApp() {
   loginScreen.hidden = true;
@@ -320,6 +427,7 @@ async function showAdminApp() {
 
   adminRoutineEditor.hidden = true;
   adminMemberInfo.textContent = "루틴을 관리할 회원을 선택해 주세요.";
+  adminMemberSearch.value = "";
 
   await loadAdminMembers();
 }
@@ -342,15 +450,15 @@ async function showScreenForCurrentUser() {
     .eq("id", user.id)
     .maybeSingle();
 
-    if (profileError || !profile) {
-      console.error("회원 역할 확인 실패:", profileError);
-    
-      loginMessage.textContent = profileError
-        ? `회원 정보 오류: ${profileError.message}`
-        : "회원 정보 오류: 프로필이 없습니다.";
-    
-      return;
-    }
+  if (profileError || !profile) {
+    console.error("회원 역할 확인 실패:", profileError);
+
+    loginMessage.textContent = profileError
+      ? `회원 정보 오류: ${profileError.message}`
+      : "회원 정보 오류: 프로필이 없습니다.";
+
+    return;
+  }
 
   if (profile.role === "admin") {
     await showAdminApp();
@@ -361,7 +469,7 @@ async function showScreenForCurrentUser() {
 }
 
 // 관리자 화면에서 회원을 선택했을 때
-adminMemberSelect.addEventListener("change", function () {
+adminMemberSelect.addEventListener("change", async function () {
   const selectedOption =
     adminMemberSelect.options[adminMemberSelect.selectedIndex];
 
@@ -381,8 +489,49 @@ adminMemberSelect.addEventListener("change", function () {
   }
 
   adminRoutineEditor.hidden = false;
-  adminMemberInfo.textContent =
-    `${selectedOption.textContent} 회원의 루틴을 설정합니다.`;
+
+  const memberName =
+    selectedOption.dataset.memberName || "이름 없음";
+
+  const email = selectedOption.dataset.email || "";
+  const emailText = email ? ` (${email})` : "";
+
+  const assignmentCount =
+    selectedOption.dataset.assignmentCount || "0";
+
+  const currentRoutineName =
+    selectedOption.dataset.currentRoutineName || "";
+
+  adminMemberInfo.textContent = currentRoutineName
+    ? `${memberName}${emailText} · 총 ${assignmentCount}회 배정 · 현재 루틴: ${currentRoutineName}`
+    : `${memberName}${emailText} · 총 ${assignmentCount}회 배정 · 현재 루틴 없음`;
+    const currentRoutineImagePath =
+  selectedOption.dataset.currentRoutineImagePath || "";
+
+if (currentRoutineImagePath) {
+  const {
+    data: signedImageData,
+    error: signedImageError
+  } = await supabaseClient.storage
+    .from("routine-images")
+    .createSignedUrl(currentRoutineImagePath, 3600);
+
+  // 이미지를 불러오는 동안 다른 회원을 선택한 경우 중단
+  if (adminMemberSelect.value !== selectedOption.value) {
+    return;
+  }
+
+  if (signedImageError) {
+    console.error(
+      "현재 루틴 이미지 불러오기 실패:",
+      signedImageError
+    );
+    return;
+  }
+
+  adminRoutinePreview.src = signedImageData.signedUrl;
+  adminRoutinePreview.hidden = false;
+}
 });
 adminRoutineImage.addEventListener("change", function () {
   const selectedFile = adminRoutineImage.files[0];
@@ -460,27 +609,27 @@ saveAdminRoutineButton.addEventListener("click", async function () {
     .select("id")
     .single();
 
-    if (insertError) {
-      console.error("루틴 정보 저장 실패:", insertError);
-    
-      // 데이터 저장에 실패했으므로 방금 업로드한 이미지를 삭제
-      const { error: cleanupError } = await supabaseClient.storage
-        .from("routine-images")
-        .remove([imagePath]);
-    
-      if (cleanupError) {
-        console.error(
-          "저장 실패 이미지 정리 실패:",
-          cleanupError
-        );
-      }
-    
-      adminSaveMessage.textContent =
-        "루틴 정보를 저장하지 못했습니다.";
-    
-      saveAdminRoutineButton.disabled = false;
-      return;
+  if (insertError) {
+    console.error("루틴 정보 저장 실패:", insertError);
+
+    // 데이터 저장에 실패했으므로 방금 업로드한 이미지를 삭제
+    const { error: cleanupError } = await supabaseClient.storage
+      .from("routine-images")
+      .remove([imagePath]);
+
+    if (cleanupError) {
+      console.error(
+        "저장 실패 이미지 정리 실패:",
+        cleanupError
+      );
     }
+
+    adminSaveMessage.textContent =
+      "루틴 정보를 저장하지 못했습니다.";
+
+    saveAdminRoutineButton.disabled = false;
+    return;
+  }
 
 
 
@@ -673,21 +822,21 @@ signupForm.addEventListener("submit", async function (event) {
 
   await initializeLogin();
 });
-  document.querySelectorAll("[data-password-toggle]").forEach((button) => {
-    button.addEventListener("click", function () {
-      const passwordInput = document.querySelector(
-        `#${button.dataset.passwordToggle}`
-      );
-  
-      const isHidden = passwordInput.type === "password";
-  
-      passwordInput.type = isHidden ? "text" : "password";
-      button.textContent = isHidden ? "🙈" : "👁";
-      button.setAttribute(
-        "aria-label",
-        isHidden ? "비밀번호 숨기기" : "비밀번호 보기"
-      );
-      button.setAttribute("aria-pressed", String(isHidden));
-    });
+document.querySelectorAll("[data-password-toggle]").forEach((button) => {
+  button.addEventListener("click", function () {
+    const passwordInput = document.querySelector(
+      `#${button.dataset.passwordToggle}`
+    );
+
+    const isHidden = passwordInput.type === "password";
+
+    passwordInput.type = isHidden ? "text" : "password";
+    button.textContent = isHidden ? "🙈" : "👁";
+    button.setAttribute(
+      "aria-label",
+      isHidden ? "비밀번호 숨기기" : "비밀번호 보기"
+    );
+    button.setAttribute("aria-pressed", String(isHidden));
   });
+});
 initializeLogin();

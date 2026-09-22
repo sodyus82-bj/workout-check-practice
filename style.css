@@ -416,7 +416,8 @@ body {
   outline: 2px solid rgba(236, 106, 26, 0.15);
 }
 
-#loginButton {
+#loginButton,
+#signupButton {
   margin-top: 12px;
   padding: 15px;
   color: var(--brand-white);
@@ -426,6 +427,11 @@ body {
   font: inherit;
   font-weight: bold;
   cursor: pointer;
+}
+#loginButton:disabled,
+#signupButton:disabled {
+  opacity: 0.65;
+  cursor: wait;
 }
 
 .login-message {
