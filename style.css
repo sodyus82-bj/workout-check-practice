@@ -1016,6 +1016,100 @@ body {
   line-height: 1.6;
 }
 
+/* 운동 기록 메모 수정 입력창 */
+.workout-record-caption-editor {
+  display: block;
+  width: 100%;
+  min-height: 88px;
+  margin: 0;
+  padding: 10px 8px;
+  color: #25304a;
+  background-color: #fffaf1;
+  border: 1px solid #d9d1c2;
+  border-radius: 8px;
+  outline: none;
+  resize: vertical;
+
+  font-family:
+    "Nanum Pen Script",
+    "Apple SD Gothic Neo",
+    "Malgun Gothic",
+    cursive;
+  font-size: 20px;
+  line-height: 1.6;
+}
+
+/* 메모 수정 버튼 영역 */
+.workout-record-edit-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+/* 수정 취소·저장 버튼 */
+.cancel-workout-caption-button,
+.save-workout-caption-button {
+  padding: 8px 14px;
+  border-radius: 8px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.cancel-workout-caption-button {
+  color: #596273;
+  background-color: transparent;
+  border: 1px solid #c9ced7;
+}
+
+.save-workout-caption-button {
+  color: #ffffff;
+  background-color: var(--brand-orange);
+  border: 1px solid var(--brand-orange);
+}
+
+.save-workout-caption-button:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+
+/* 평상시 수정·삭제 버튼 묶음 */
+.workout-record-buttons {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* 운동 기록 수정 버튼 */
+.edit-workout-record-button {
+  flex-shrink: 0;
+  padding: 7px 10px;
+  color: #4f5e74;
+  background-color: transparent;
+  border: 1px solid #bdc6d3;
+  border-radius: 8px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.edit-workout-record-button:active {
+  color: #ffffff;
+  background-color: #4f5e74;
+  border-color: #4f5e74;
+}
+
+/* 자바스크립트로 숨긴 수정 요소 */
+.workout-record-caption[hidden],
+.workout-record-caption-editor[hidden],
+.workout-record-edit-actions[hidden],
+.workout-record-footer[hidden] {
+  display: none;
+}
+
 /* 운동 기록 날짜와 삭제 버튼 영역 */
 .workout-record-footer {
   display: flex;

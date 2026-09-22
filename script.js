@@ -292,45 +292,151 @@ function renderWorkoutRecords() {
         minute: "2-digit"
       }).format(new Date(record.taken_at));
 
-      const recordFooter =
-      document.createElement("div");
-    
-    recordFooter.className =
-      "workout-record-footer";
-    
-    const deleteButton =
-      document.createElement("button");
-    
-    deleteButton.type = "button";
-    deleteButton.className =
-      "delete-workout-record-button";
-    deleteButton.textContent = "삭제하기";
-    
-    deleteButton.setAttribute(
-      "aria-label",
-      "이 운동 기록 삭제하기"
+      const captionEditor =
+  document.createElement("textarea");
+
+captionEditor.className =
+  "workout-record-caption-editor";
+captionEditor.value = record.caption || "";
+captionEditor.maxLength = 120;
+captionEditor.rows = 3;
+captionEditor.hidden = true;
+captionEditor.setAttribute(
+  "aria-label",
+  "운동 기록 메모 수정"
+);
+
+const editActions =
+  document.createElement("div");
+
+editActions.className =
+  "workout-record-edit-actions";
+editActions.hidden = true;
+
+const cancelEditButton =
+  document.createElement("button");
+
+cancelEditButton.type = "button";
+cancelEditButton.className =
+  "cancel-workout-caption-button";
+cancelEditButton.textContent = "취소";
+
+const saveEditButton =
+  document.createElement("button");
+
+saveEditButton.type = "button";
+saveEditButton.className =
+  "save-workout-caption-button";
+saveEditButton.textContent = "저장";
+
+editActions.append(
+  cancelEditButton,
+  saveEditButton
+);
+
+const recordFooter =
+  document.createElement("div");
+
+recordFooter.className =
+  "workout-record-footer";
+
+const recordButtons =
+  document.createElement("div");
+
+recordButtons.className =
+  "workout-record-buttons";
+
+const editButton =
+  document.createElement("button");
+
+editButton.type = "button";
+editButton.className =
+  "edit-workout-record-button";
+editButton.textContent = "수정";
+
+const deleteButton =
+  document.createElement("button");
+
+deleteButton.type = "button";
+deleteButton.className =
+  "delete-workout-record-button";
+deleteButton.textContent = "삭제하기";
+
+deleteButton.setAttribute(
+  "aria-label",
+  "이 운동 기록 삭제하기"
+);
+
+editButton.addEventListener(
+  "click",
+  function () {
+    captionEditor.value =
+      record.caption || "";
+
+    recordCaption.hidden = true;
+    recordFooter.hidden = true;
+    captionEditor.hidden = false;
+    editActions.hidden = false;
+
+    captionEditor.focus();
+    captionEditor.setSelectionRange(
+      captionEditor.value.length,
+      captionEditor.value.length
     );
-    
-    deleteButton.addEventListener(
-      "click",
-      function () {
-        deleteWorkoutRecord(
-          record,
-          deleteButton
-        );
-      }
+  }
+);
+
+cancelEditButton.addEventListener(
+  "click",
+  function () {
+    captionEditor.value =
+      record.caption || "";
+
+    captionEditor.hidden = true;
+    editActions.hidden = true;
+    recordCaption.hidden = false;
+    recordFooter.hidden = false;
+  }
+);
+
+saveEditButton.addEventListener(
+  "click",
+  async function () {
+    await updateWorkoutRecordCaption(
+      record,
+      captionEditor.value,
+      saveEditButton
     );
-    
-    recordFooter.append(
-      recordDate,
+  }
+);
+
+deleteButton.addEventListener(
+  "click",
+  function () {
+    deleteWorkoutRecord(
+      record,
       deleteButton
     );
-    
-    recordCard.append(
-      recordImage,
-      recordCaption,
-      recordFooter
-    );
+  }
+);
+
+recordButtons.append(
+  editButton,
+  deleteButton
+);
+
+recordFooter.append(
+  recordDate,
+  recordButtons
+);
+
+recordCard.append(
+  recordImage,
+  recordCaption,
+  captionEditor,
+  editActions,
+  recordFooter
+);
     
     workoutRecordList.append(recordCard);
   });
@@ -519,6 +625,72 @@ async function deleteWorkoutRecord(
 
     deleteButton.disabled = false;
     deleteButton.textContent = "삭제하기";
+  }
+}
+
+// 회원 본인의 운동 기록 메모 수정
+async function updateWorkoutRecordCaption(
+  record,
+  newCaption,
+  saveButton
+) {
+  saveButton.disabled = true;
+  saveButton.textContent = "저장 중...";
+
+  try {
+    const {
+      data: { user },
+      error: userError
+    } = await supabaseClient.auth.getUser();
+
+    if (userError || !user) {
+      throw new Error(
+        "로그인 정보를 확인할 수 없습니다."
+      );
+    }
+
+    const {
+      data: updatedRecords,
+      error: updateError
+    } = await supabaseClient
+      .from("workout_records")
+      .update({
+        caption: newCaption.trim()
+      })
+      .eq("id", record.id)
+      .eq("user_id", user.id)
+      .select("id");
+
+    if (updateError) {
+      throw updateError;
+    }
+
+    if (
+      !updatedRecords ||
+      updatedRecords.length === 0
+    ) {
+      throw new Error(
+        "수정할 운동 기록을 찾을 수 없습니다."
+      );
+    }
+
+    await loadWorkoutRecords(user.id);
+
+  } catch (updateError) {
+    console.error(
+      "운동 기록 메모 수정 실패:",
+      updateError
+    );
+
+    alert(
+      `운동 기록을 수정하지 못했습니다.\n${
+        updateError.message ||
+        "알 수 없는 오류"
+      }`
+    );
+
+    saveButton.disabled = false;
+    saveButton.textContent = "저장";
   }
 }
 
