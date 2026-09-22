@@ -420,20 +420,24 @@ async function startWorkoutCamera() {
     }
 
     const cameraStream =
-      await navigator.mediaDevices.getUserMedia({
-        audio: false,
-        video: {
-          facingMode: {
-            ideal: workoutCameraFacingMode
-          },
-          width: {
-            ideal: 1600
-          },
-          height: {
-            ideal: 2000
-          }
-        }
-      });
+    await navigator.mediaDevices.getUserMedia({
+      audio: false,
+      video: {
+        facingMode: {
+          ideal: workoutCameraFacingMode
+        },
+        width: {
+          ideal: 1200
+        },
+        height: {
+          ideal: 1600
+        },
+        aspectRatio: {
+          ideal: 3 / 4
+        },
+        resizeMode: "crop-and-scale"
+      }
+    });
 
     // 기다리는 동안 화면을 닫았거나 다른 카메라로 바꾼 경우
     if (
