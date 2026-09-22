@@ -741,6 +741,10 @@ async function saveWorkoutRecord() {
 
     saveWorkoutRecordButton.textContent =
       "저장 완료";
+      
+      setTimeout(function () {
+        closeWorkoutCamera();
+      }, 800);
 
   } catch (saveError) {
     console.error(
