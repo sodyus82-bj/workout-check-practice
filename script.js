@@ -749,7 +749,7 @@ async function saveWorkoutRecord() {
     );
 
     workoutRecordSaveMessage.textContent =
-      "운동 기록을 저장하지 못했습니다.";
+    `저장 실패: ${saveError.message || "알 수 없는 오류"}`;
 
     saveWorkoutRecordButton.disabled = false;
     saveWorkoutRecordButton.textContent =
