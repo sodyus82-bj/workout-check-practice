@@ -292,12 +292,46 @@ function renderWorkoutRecords() {
         minute: "2-digit"
       }).format(new Date(record.taken_at));
 
+      const recordFooter =
+      document.createElement("div");
+    
+    recordFooter.className =
+      "workout-record-footer";
+    
+    const deleteButton =
+      document.createElement("button");
+    
+    deleteButton.type = "button";
+    deleteButton.className =
+      "delete-workout-record-button";
+    deleteButton.textContent = "삭제하기";
+    
+    deleteButton.setAttribute(
+      "aria-label",
+      "이 운동 기록 삭제하기"
+    );
+    
+    deleteButton.addEventListener(
+      "click",
+      function () {
+        deleteWorkoutRecord(
+          record,
+          deleteButton
+        );
+      }
+    );
+    
+    recordFooter.append(
+      recordDate,
+      deleteButton
+    );
+    
     recordCard.append(
       recordImage,
       recordCaption,
-      recordDate
+      recordFooter
     );
-
+    
     workoutRecordList.append(recordCard);
   });
 }
@@ -403,6 +437,89 @@ async function loadWorkoutRecords(userId) {
 
   renderWorkoutCalendar();
   renderWorkoutRecords();
+}
+
+// 회원 본인의 운동 기록 삭제
+async function deleteWorkoutRecord(
+  record,
+  deleteButton
+) {
+  const shouldDelete = window.confirm(
+    "이 운동 기록을 삭제할까요?\n삭제한 사진은 복구할 수 없습니다."
+  );
+
+  if (!shouldDelete) {
+    return;
+  }
+
+  deleteButton.disabled = true;
+  deleteButton.textContent = "삭제 중...";
+
+  try {
+    const {
+      data: { user },
+      error: userError
+    } = await supabaseClient.auth.getUser();
+
+    if (userError || !user) {
+      throw new Error(
+        "로그인 정보를 확인할 수 없습니다."
+      );
+    }
+
+    const {
+      data: deletedRecords,
+      error: recordDeleteError
+    } = await supabaseClient
+      .from("workout_records")
+      .delete()
+      .eq("id", record.id)
+      .eq("user_id", user.id)
+      .select("id");
+
+    if (recordDeleteError) {
+      throw recordDeleteError;
+    }
+
+    if (
+      !deletedRecords ||
+      deletedRecords.length === 0
+    ) {
+      throw new Error(
+        "삭제할 운동 기록을 찾을 수 없습니다."
+      );
+    }
+
+    const { error: photoDeleteError } =
+      await supabaseClient.storage
+        .from("workout-photos")
+        .remove([record.photo_path]);
+
+    if (photoDeleteError) {
+      console.error(
+        "운동 기록 사진 파일 삭제 실패:",
+        photoDeleteError
+      );
+    }
+
+    await loadWorkoutRecords(user.id);
+
+  } catch (deleteError) {
+    console.error(
+      "운동 기록 삭제 실패:",
+      deleteError
+    );
+
+    alert(
+      `운동 기록을 삭제하지 못했습니다.\n${
+        deleteError.message ||
+        "알 수 없는 오류"
+      }`
+    );
+
+    deleteButton.disabled = false;
+    deleteButton.textContent = "삭제하기";
+  }
 }
 
 // 운동 기록 캘린더 그리기

@@ -1016,13 +1016,48 @@ body {
   line-height: 1.6;
 }
 
+/* 운동 기록 날짜와 삭제 버튼 영역 */
+.workout-record-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 12px;
+}
+
 /* 저장된 운동 기록 날짜 */
 .workout-record-date {
   display: block;
-  margin-top: 12px;
+  margin: 0;
   color: #858070;
   font-size: 13px;
-  text-align: right;
+  line-height: 1.5;
+  text-align: left;
+}
+
+/* 운동 기록 삭제 버튼 */
+.delete-workout-record-button {
+  flex-shrink: 0;
+  padding: 7px 10px;
+  color: #a44738;
+  background-color: transparent;
+  border: 1px solid #d9b5ae;
+  border-radius: 8px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.delete-workout-record-button:active {
+  color: #ffffff;
+  background-color: #a44738;
+  border-color: #a44738;
+}
+
+.delete-workout-record-button:disabled {
+  opacity: 0.55;
+  cursor: wait;
 }
 
 /* 센터 커뮤니티 임시 화면 */
