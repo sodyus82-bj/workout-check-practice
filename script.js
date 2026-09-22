@@ -1341,6 +1341,488 @@ const adminRoutinePreview = document.querySelector("#adminRoutinePreview");
 const adminRoutineDescription = document.querySelector("#adminRoutineDescription");
 const saveAdminRoutineButton = document.querySelector("#saveAdminRoutineButton");
 const adminSaveMessage = document.querySelector("#adminSaveMessage");
+
+// 관리자 센터 소식 작성 요소
+const adminCommunityTitle =
+  document.querySelector(
+    "#adminCommunityTitle"
+  );
+
+const adminCommunityImages =
+  document.querySelector(
+    "#adminCommunityImages"
+  );
+
+const adminCommunityImagePreview =
+  document.querySelector(
+    "#adminCommunityImagePreview"
+  );
+
+const adminCommunityBody =
+  document.querySelector(
+    "#adminCommunityBody"
+  );
+
+const saveAdminCommunityButton =
+  document.querySelector(
+    "#saveAdminCommunityButton"
+  );
+
+const adminCommunityMessage =
+  document.querySelector(
+    "#adminCommunityMessage"
+  );
+
+// 선택된 센터 소식 이미지 파일
+let selectedAdminCommunityFiles = [];
+
+// 미리보기에 사용한 임시 주소
+let adminCommunityPreviewUrls = [];
+
+
+// 미리보기 화면과 임시 주소 정리
+function clearAdminCommunityImagePreview() {
+  adminCommunityPreviewUrls.forEach(
+    function (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+    }
+  );
+
+  adminCommunityPreviewUrls = [];
+  adminCommunityImagePreview.innerHTML = "";
+}
+
+
+// 선택 이미지 전체 초기화
+function resetAdminCommunityImages() {
+  selectedAdminCommunityFiles = [];
+  adminCommunityImages.value = "";
+
+  clearAdminCommunityImagePreview();
+}
+
+
+// 현재 선택된 이미지 미리보기 표시
+function renderAdminCommunityImagePreview() {
+  clearAdminCommunityImagePreview();
+
+  selectedAdminCommunityFiles.forEach(
+    function (file, index) {
+      const previewUrl =
+        URL.createObjectURL(file);
+
+      adminCommunityPreviewUrls.push(
+        previewUrl
+      );
+
+      const previewItem =
+        document.createElement("div");
+
+      previewItem.className =
+        "admin-community-preview-item";
+
+      const previewImage =
+        document.createElement("img");
+
+      previewImage.src = previewUrl;
+      previewImage.alt =
+        `선택한 소식 이미지 ${index + 1}`;
+
+      const previewNumber =
+        document.createElement("span");
+
+      previewNumber.className =
+        "admin-community-preview-number";
+
+      previewNumber.textContent =
+        String(index + 1);
+
+      const removeButton =
+        document.createElement("button");
+
+      removeButton.type = "button";
+      removeButton.className =
+        "admin-community-preview-remove";
+      removeButton.textContent = "×";
+
+      removeButton.setAttribute(
+        "aria-label",
+        `${index + 1}번 이미지 선택 취소`
+      );
+
+      removeButton.addEventListener(
+        "click",
+        function () {
+          selectedAdminCommunityFiles.splice(
+            index,
+            1
+          );
+
+          adminCommunityMessage.textContent = "";
+
+          renderAdminCommunityImagePreview();
+        }
+      );
+
+      previewItem.append(
+        previewImage,
+        previewNumber,
+        removeButton
+      );
+
+      adminCommunityImagePreview.append(
+        previewItem
+      );
+    }
+  );
+}
+
+
+// 센터 소식 이미지 추가 선택
+adminCommunityImages.addEventListener(
+  "change",
+  function () {
+    const newlySelectedFiles = Array.from(
+      adminCommunityImages.files || []
+    );
+
+    /*
+      같은 파일을 다시 선택해도 change가
+      작동할 수 있도록 입력창만 초기화
+    */
+    adminCommunityImages.value = "";
+
+    if (newlySelectedFiles.length === 0) {
+      return;
+    }
+
+    const allowedImageTypes = [
+      "image/jpeg",
+      "image/png",
+      "image/webp"
+    ];
+
+    const hasInvalidFile =
+      newlySelectedFiles.some(
+        function (file) {
+          return !allowedImageTypes.includes(
+            file.type
+          );
+        }
+      );
+
+    if (hasInvalidFile) {
+      adminCommunityMessage.textContent =
+        "JPG, PNG, WEBP 이미지만 선택할 수 있습니다.";
+
+      return;
+    }
+
+    // 이미 선택된 동일 파일은 제외
+    const filesToAdd =
+      newlySelectedFiles.filter(
+        function (newFile) {
+          return !selectedAdminCommunityFiles.some(
+            function (selectedFile) {
+              return (
+                selectedFile.name ===
+                  newFile.name &&
+                selectedFile.size ===
+                  newFile.size &&
+                selectedFile.lastModified ===
+                  newFile.lastModified
+              );
+            }
+          );
+        }
+      );
+
+    if (
+      selectedAdminCommunityFiles.length +
+        filesToAdd.length >
+      5
+    ) {
+      adminCommunityMessage.textContent =
+        "이미지는 최대 5장까지 선택할 수 있습니다.";
+
+      return;
+    }
+
+    selectedAdminCommunityFiles = [
+      ...selectedAdminCommunityFiles,
+      ...filesToAdd
+    ];
+
+    renderAdminCommunityImagePreview();
+
+    if (
+      filesToAdd.length <
+      newlySelectedFiles.length
+    ) {
+      adminCommunityMessage.textContent =
+        "이미 선택한 파일은 중복에서 제외했습니다.";
+    } else {
+      adminCommunityMessage.textContent = "";
+    }
+  }
+);
+
+// 센터 소식 게시
+async function saveAdminCommunityPost() {
+  const title =
+    adminCommunityTitle.value.trim();
+
+  const body =
+    adminCommunityBody.value.trim();
+
+  if (!title) {
+    adminCommunityMessage.textContent =
+      "소식 제목을 입력해 주세요.";
+
+    adminCommunityTitle.focus();
+    return;
+  }
+
+  if (!body) {
+    adminCommunityMessage.textContent =
+      "소식 내용을 입력해 주세요.";
+
+    adminCommunityBody.focus();
+    return;
+  }
+
+  if (
+    selectedAdminCommunityFiles.length === 0
+  ) {
+    adminCommunityMessage.textContent =
+      "소식 이미지를 1장 이상 선택해 주세요.";
+
+    return;
+  }
+
+  if (
+    selectedAdminCommunityFiles.length > 5
+  ) {
+    adminCommunityMessage.textContent =
+      "이미지는 최대 5장까지 선택할 수 있습니다.";
+
+    return;
+  }
+
+  saveAdminCommunityButton.disabled = true;
+  saveAdminCommunityButton.textContent =
+    "게시 중...";
+
+  adminCommunityMessage.textContent =
+    "센터 소식을 저장하고 있습니다.";
+
+  let createdPostId = null;
+  const uploadedImagePaths = [];
+
+  try {
+    const {
+      data: { user },
+      error: userError
+    } = await supabaseClient.auth.getUser();
+
+    if (userError || !user) {
+      throw new Error(
+        "로그인 정보를 확인할 수 없습니다."
+      );
+    }
+
+    /*
+      이미지 저장이 모두 완료되기 전에는
+      회원 화면에 게시물이 나타나지 않도록
+      비공개 상태로 먼저 생성
+    */
+    const {
+      data: createdPost,
+      error: postInsertError
+    } = await supabaseClient
+      .from("community_posts")
+      .insert({
+        title: title,
+        body: body,
+        is_published: false,
+        created_by: user.id
+      })
+      .select("id")
+      .single();
+
+    if (postInsertError) {
+      throw postInsertError;
+    }
+
+    createdPostId = createdPost.id;
+
+    const imageRows = [];
+
+    /*
+      선택한 순서대로 이미지를 Storage에
+      하나씩 업로드
+    */
+    for (
+      let index = 0;
+      index <
+        selectedAdminCommunityFiles.length;
+      index += 1
+    ) {
+      const file =
+        selectedAdminCommunityFiles[index];
+
+      const extensionByType = {
+        "image/jpeg": "jpg",
+        "image/png": "png",
+        "image/webp": "webp"
+      };
+
+      const fileExtension =
+        extensionByType[file.type];
+
+      const uniqueName =
+        `${Date.now()}-${index}-` +
+        `${Math.random()
+          .toString(36)
+          .slice(2)}.${fileExtension}`;
+
+      const storagePath =
+        `${createdPostId}/${uniqueName}`;
+
+      const {
+        error: uploadError
+      } = await supabaseClient.storage
+        .from("community-images")
+        .upload(
+          storagePath,
+          file,
+          {
+            cacheControl: "3600",
+            upsert: false,
+            contentType: file.type
+          }
+        );
+
+      if (uploadError) {
+        throw uploadError;
+      }
+
+      uploadedImagePaths.push(
+        storagePath
+      );
+
+      imageRows.push({
+        post_id: createdPostId,
+        storage_path: storagePath,
+        alt_text:
+          `${title} 이미지 ${index + 1}`,
+        sort_order: index
+      });
+    }
+
+    // 업로드된 이미지 정보를 DB에 저장
+    const {
+      error: imageInsertError
+    } = await supabaseClient
+      .from("community_post_images")
+      .insert(imageRows);
+
+    if (imageInsertError) {
+      throw imageInsertError;
+    }
+
+    /*
+      본문과 이미지가 모두 저장된 후
+      회원에게 공개
+    */
+    const {
+      error: publishError
+    } = await supabaseClient
+      .from("community_posts")
+      .update({
+        is_published: true,
+        published_at:
+          new Date().toISOString(),
+        updated_at:
+          new Date().toISOString()
+      })
+      .eq("id", createdPostId);
+
+    if (publishError) {
+      throw publishError;
+    }
+
+    adminCommunityTitle.value = "";
+    adminCommunityBody.value = "";
+
+    resetAdminCommunityImages();
+
+    adminCommunityMessage.textContent =
+      "센터 소식을 게시했습니다.";
+
+  } catch (saveError) {
+    console.error(
+      "센터 소식 게시 실패:",
+      saveError
+    );
+
+    /*
+      저장 도중 실패했다면 이미 업로드된
+      이미지와 미완성 게시물을 정리
+    */
+    if (uploadedImagePaths.length > 0) {
+      const {
+        error: cleanupImageError
+      } = await supabaseClient.storage
+        .from("community-images")
+        .remove(uploadedImagePaths);
+
+      if (cleanupImageError) {
+        console.error(
+          "소식 이미지 정리 실패:",
+          cleanupImageError
+        );
+      }
+    }
+
+    if (createdPostId !== null) {
+      const {
+        error: cleanupPostError
+      } = await supabaseClient
+        .from("community_posts")
+        .delete()
+        .eq("id", createdPostId);
+
+      if (cleanupPostError) {
+        console.error(
+          "미완성 소식 정리 실패:",
+          cleanupPostError
+        );
+      }
+    }
+
+    adminCommunityMessage.textContent =
+      `게시 실패: ${
+        saveError.message ||
+        "알 수 없는 오류"
+      }`;
+
+  } finally {
+    saveAdminCommunityButton.disabled =
+      false;
+
+    saveAdminCommunityButton.textContent =
+      "센터 소식 게시";
+  }
+}
+
+
+// 센터 소식 게시 버튼 연결
+saveAdminCommunityButton.addEventListener(
+  "click",
+  saveAdminCommunityPost
+);
+
 function appendTextWithLinks(container, text) {
   const urlPattern = /https?:\/\/[^\s]+/g;
   let lastIndex = 0;

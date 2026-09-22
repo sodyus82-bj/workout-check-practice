@@ -7,7 +7,7 @@
 
   <title>오늘의 운동 체크</title>
 
-  <link rel="stylesheet" href="style.css?v=9">
+  <link rel="stylesheet" href="style.css?v=10">
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#ec6a1a">
 
@@ -216,7 +216,7 @@
     <img class="screen-logo screen-logo-top" src="images/center-logo.png" alt="헬스와 필라테스 화곡점">
     <header class="header">
       <p class="label">관리자 페이지</p>
-      <h1>회원 루틴 관리</h1>
+      <h1>센터 운영 관리</h1>
     </header>
 
     <section class="admin-card">
@@ -253,6 +253,73 @@
       </button>
 
       <p id="adminSaveMessage" class="admin-message"></p>
+    </section>
+
+    <!-- 센터 커뮤니티 소식 작성 -->
+    <section id="adminCommunityEditor" class="admin-card">
+      <h2 class="admin-section-title">
+        센터 소식 작성
+      </h2>
+
+      <p class="admin-section-description">
+        회원에게 전달할 새로운 센터 소식을 작성합니다.
+      </p>
+      
+      <label for="adminCommunityTitle">
+        소식 제목
+      </label>
+
+      <input
+        id="adminCommunityTitle"
+        type="text"
+        maxlength="100"
+        placeholder="예: 센터 대청소를 완료했습니다"
+      >
+
+      <label for="adminCommunityImages">
+        소식 이미지
+      </label>
+
+      <input
+        id="adminCommunityImages"
+        type="file"
+        accept="image/png, image/jpeg, image/webp"
+        multiple
+      >
+
+      <p class="admin-field-help">
+        이미지는 최대 5장까지 선택할 수 있습니다.
+      </p>
+
+      <div
+        id="adminCommunityImagePreview"
+        class="admin-community-image-preview"
+        aria-live="polite"
+      ></div>
+
+      <label for="adminCommunityBody">
+        소식 내용
+      </label>
+
+      <textarea
+        id="adminCommunityBody"
+        rows="8"
+        maxlength="5000"
+        placeholder="회원에게 전달할 내용을 입력하세요."
+      ></textarea>
+
+      <button
+        id="saveAdminCommunityButton"
+        type="button"
+      >
+        센터 소식 게시
+      </button>
+
+      <p
+        id="adminCommunityMessage"
+        class="admin-message"
+        aria-live="polite"
+      ></p>
     </section>
 
     <button id="adminLogoutButton" class="zoom-button" type="button">
@@ -328,7 +395,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-  <script src="script.js?v=9"></script>
+  <script src="script.js?v=10"></script>
 </body>
 
 
