@@ -185,6 +185,22 @@ visibleWorkoutMonth.setDate(1);
 // 나중에 Supabase에서 불러올 기록 날짜
 let workoutRecordDates = new Set();
 
+// 운동 기록을 표시할 영역
+const workoutRecordList =
+  document.querySelector("#workoutRecordList");
+
+const emptyWorkoutRecordMessage =
+  document.querySelector("#emptyWorkoutRecordMessage");
+
+// 서버에서 불러온 운동 기록
+let workoutRecords = [];
+
+// 현재 기록을 조회하는 회원
+let workoutRecordsUserId = "";
+
+// 이전 조회 결과가 뒤늦게 표시되는 것을 방지
+let workoutRecordsRequestId = 0;
+
 // 사용자가 선택한 날짜
 let selectedWorkoutDate = "";
 
@@ -194,6 +210,199 @@ function makeWorkoutDateKey(year, monthIndex, day) {
   const date = String(day).padStart(2, "0");
 
   return `${year}-${month}-${date}`;
+}
+// 운동 기록의 날짜를 2026-09-22 형태로 변환
+function getWorkoutRecordDateKey(takenAt) {
+  const recordDate = new Date(takenAt);
+
+  return makeWorkoutDateKey(
+    recordDate.getFullYear(),
+    recordDate.getMonth(),
+    recordDate.getDate()
+  );
+}
+
+// 저장된 운동 기록 목록 표시
+function renderWorkoutRecords() {
+  workoutRecordList.innerHTML = "";
+
+  const recordsToShow = selectedWorkoutDate
+    ? workoutRecords.filter((record) => {
+        return (
+          getWorkoutRecordDateKey(record.taken_at) ===
+          selectedWorkoutDate
+        );
+      })
+    : workoutRecords;
+
+  if (recordsToShow.length === 0) {
+    emptyWorkoutRecordMessage.textContent =
+      selectedWorkoutDate
+        ? "선택한 날짜에는 저장된 운동 기록이 없습니다."
+        : "아직 저장된 운동 기록이 없습니다.";
+
+    workoutRecordList.append(
+      emptyWorkoutRecordMessage
+    );
+
+    return;
+  }
+
+  recordsToShow.forEach((record) => {
+    const recordCard =
+      document.createElement("article");
+
+    recordCard.className =
+      "workout-record-card";
+
+    const recordImage =
+      document.createElement("img");
+
+    recordImage.className =
+      "workout-record-photo";
+
+    recordImage.src = record.signedUrl;
+    recordImage.alt =
+      record.caption || "운동 기록 사진";
+    recordImage.loading = "lazy";
+
+    const recordCaption =
+      document.createElement("p");
+
+    recordCaption.className =
+      "workout-record-caption";
+
+    recordCaption.textContent =
+      record.caption || "";
+
+    const recordDate =
+      document.createElement("time");
+
+    recordDate.className =
+      "workout-record-date";
+
+    recordDate.dateTime = record.taken_at;
+
+    recordDate.textContent =
+      new Intl.DateTimeFormat("ko-KR", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit"
+      }).format(new Date(record.taken_at));
+
+    recordCard.append(
+      recordImage,
+      recordCaption,
+      recordDate
+    );
+
+    workoutRecordList.append(recordCard);
+  });
+}
+
+// 로그인한 회원의 운동 기록 불러오기
+async function loadWorkoutRecords(userId) {
+  const currentRequestId =
+    ++workoutRecordsRequestId;
+
+  workoutRecordsUserId = userId;
+
+  workoutRecordList.innerHTML = "";
+  emptyWorkoutRecordMessage.textContent =
+    "운동 기록을 불러오는 중입니다.";
+
+  workoutRecordList.append(
+    emptyWorkoutRecordMessage
+  );
+
+  const {
+    data: records,
+    error: recordsError
+  } = await supabaseClient
+    .from("workout_records")
+    .select(
+      "id, photo_path, caption, taken_at"
+    )
+    .eq("user_id", userId)
+    .order("taken_at", {
+      ascending: false
+    });
+
+  if (
+    currentRequestId !==
+    workoutRecordsRequestId
+  ) {
+    return;
+  }
+
+  if (recordsError) {
+    console.error(
+      "운동 기록 불러오기 실패:",
+      recordsError
+    );
+
+    workoutRecords = [];
+    workoutRecordDates = new Set();
+
+    emptyWorkoutRecordMessage.textContent =
+      "운동 기록을 불러오지 못했습니다.";
+
+    renderWorkoutCalendar();
+    return;
+  }
+
+  const recordsWithSignedUrls =
+    await Promise.all(
+      (records || []).map(async (record) => {
+        const {
+          data: signedUrlData,
+          error: signedUrlError
+        } = await supabaseClient.storage
+          .from("workout-photos")
+          .createSignedUrl(
+            record.photo_path,
+            3600
+          );
+
+        if (signedUrlError) {
+          console.error(
+            "운동 기록 사진 주소 생성 실패:",
+            signedUrlError
+          );
+
+          return null;
+        }
+
+        return {
+          ...record,
+          signedUrl:
+            signedUrlData.signedUrl
+        };
+      })
+    );
+
+  if (
+    currentRequestId !==
+    workoutRecordsRequestId
+  ) {
+    return;
+  }
+
+  workoutRecords =
+    recordsWithSignedUrls.filter(Boolean);
+
+  workoutRecordDates = new Set(
+    workoutRecords.map((record) => {
+      return getWorkoutRecordDateKey(
+        record.taken_at
+      );
+    })
+  );
+
+  renderWorkoutCalendar();
+  renderWorkoutRecords();
 }
 
 // 운동 기록 캘린더 그리기
@@ -264,6 +473,7 @@ function renderWorkoutCalendar() {
           : dateKey;
 
       renderWorkoutCalendar();
+      renderWorkoutRecords();
     });
 
     workoutCalendarDays.append(dateButton);
@@ -280,6 +490,7 @@ previousWorkoutMonthButton.addEventListener(
 
     selectedWorkoutDate = "";
     renderWorkoutCalendar();
+    renderWorkoutRecords();
   }
 );
 
@@ -293,6 +504,7 @@ nextWorkoutMonthButton.addEventListener(
 
     selectedWorkoutDate = "";
     renderWorkoutCalendar();
+    renderWorkoutRecords();
   }
 );
 
@@ -736,12 +948,20 @@ async function saveWorkoutRecord() {
       throw recordError;
     }
 
+    // 저장한 날짜의 달력과 기록 목록 새로고침
+visibleWorkoutMonth =
+new Date(workoutPhotoTakenAt);
+
+visibleWorkoutMonth.setDate(1);
+selectedWorkoutDate = "";
+
+await loadWorkoutRecords(user.id);
     workoutRecordSaveMessage.textContent =
       "운동 기록을 저장했습니다.";
 
     saveWorkoutRecordButton.textContent =
       "저장 완료";
-      
+
       setTimeout(function () {
         closeWorkoutCamera();
       }, 800);
@@ -993,7 +1213,10 @@ async function showWorkoutApp(userId) {
   showMemberTab("routine");
   resetWorkoutCalendar();
 
-  await loadMemberRoutine(userId);
+  await Promise.all([
+    loadMemberRoutine(userId),
+    loadWorkoutRecords(userId)
+  ]);
 }
 
 // 관리자용 회원 목록 불러오기

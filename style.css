@@ -977,6 +977,53 @@ body {
   line-height: 1.6;
   text-align: center;
 }
+/* 저장된 운동 기록 폴라로이드 */
+.workout-record-card {
+  width: 100%;
+  padding: 14px 14px 22px;
+  color: var(--brand-navy);
+  background-color: #fffdf8;
+  border: 1px solid #ebe5da;
+  border-radius: 4px;
+  box-shadow: 0 10px 24px rgba(17, 35, 66, 0.14);
+}
+
+/* 저장된 운동 기록 사진 */
+.workout-record-photo {
+  display: block;
+  width: 100%;
+  height: auto;
+  margin-bottom: 14px;
+  background-color: #e7e9ed;
+}
+
+/* 저장된 운동 기록 메모 */
+.workout-record-caption {
+  min-height: 58px;
+  margin: 0;
+  padding: 8px 6px 14px;
+  color: #25304a;
+  border-bottom: 1px solid #e1ddd4;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+
+  font-family:
+    "Nanum Pen Script",
+    "Apple SD Gothic Neo",
+    "Malgun Gothic",
+    cursive;
+  font-size: 20px;
+  line-height: 1.6;
+}
+
+/* 저장된 운동 기록 날짜 */
+.workout-record-date {
+  display: block;
+  margin-top: 12px;
+  color: #858070;
+  font-size: 13px;
+  text-align: right;
+}
 
 /* 센터 커뮤니티 임시 화면 */
 .community-placeholder {
