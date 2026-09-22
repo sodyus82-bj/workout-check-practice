@@ -31,24 +31,14 @@
 
         <label for="loginPassword">비밀번호</label>
 
-<div class="password-field">
-  <input
-    id="loginPassword"
-    type="password"
-    autocomplete="current-password"
-    required
-  >
+        <div class="password-field">
+          <input id="loginPassword" type="password" autocomplete="current-password" required>
 
-  <button
-    class="password-toggle"
-    type="button"
-    data-password-toggle="loginPassword"
-    aria-label="비밀번호 보기"
-    aria-pressed="false"
-  >
-    👁
-  </button>
-</div>
+          <button class="password-toggle" type="button" data-password-toggle="loginPassword" aria-label="비밀번호 보기"
+            aria-pressed="false">
+            👁
+          </button>
+        </div>
 
         <button id="loginButton" type="submit">로그인</button>
         <p id="loginMessage" class="login-message"></p>
@@ -60,51 +50,21 @@
       <form id="signupForm" class="login-form" hidden>
         <p class="label">회원가입</p>
         <label for="signupName">이름</label>
-        <input
-          id="signupName"
-          type="text"
-          autocomplete="name"
-          maxlength="20"
-          required
-        >
-        
+        <input id="signupName" type="text" autocomplete="name" maxlength="20" required>
+
         <label for="signupPhoneLast4">전화번호 뒷 4자리</label>
-        <input
-          id="signupPhoneLast4"
-          type="text"
-          inputmode="numeric"
-          autocomplete="off"
-          maxlength="4"
-          pattern="[0-9]{4}"
-          placeholder="숫자 4자리"
-          required
-        >
+        <input id="signupPhoneLast4" type="text" inputmode="numeric" autocomplete="off" maxlength="4" pattern="[0-9]{4}"
+          placeholder="숫자 4자리" required>
         <label for="signupEmail">이메일</label>
-        <input
-          id="signupEmail"
-          type="email"
-          autocomplete="email"
-          required
-        >
+        <input id="signupEmail" type="email" autocomplete="email" required>
 
         <label for="signupPassword">비밀번호</label>
 
         <div class="password-field">
-          <input
-            id="signupPassword"
-            type="password"
-            autocomplete="new-password"
-            minlength="6"
-            required
-          >
-        
-          <button
-            class="password-toggle"
-            type="button"
-            data-password-toggle="signupPassword"
-            aria-label="비밀번호 보기"
-            aria-pressed="false"
-          >
+          <input id="signupPassword" type="password" autocomplete="new-password" minlength="6" required>
+
+          <button class="password-toggle" type="button" data-password-toggle="signupPassword" aria-label="비밀번호 보기"
+            aria-pressed="false">
             👁
           </button>
         </div>
@@ -112,21 +72,10 @@
         <label for="signupPasswordConfirm">비밀번호 확인</label>
 
         <div class="password-field">
-          <input
-            id="signupPasswordConfirm"
-            type="password"
-            autocomplete="new-password"
-            minlength="6"
-            required
-          >
-        
-          <button
-            class="password-toggle"
-            type="button"
-            data-password-toggle="signupPasswordConfirm"
-            aria-label="비밀번호 보기"
-            aria-pressed="false"
-          >
+          <input id="signupPasswordConfirm" type="password" autocomplete="new-password" minlength="6" required>
+
+          <button class="password-toggle" type="button" data-password-toggle="signupPasswordConfirm"
+            aria-label="비밀번호 보기" aria-pressed="false">
             👁
           </button>
         </div>
@@ -134,190 +83,133 @@
         <button id="signupButton" type="submit">회원가입</button>
         <p id="signupMessage" class="login-message"></p>
 
-        <button
-          id="hideSignupButton"
-          class="signup-link-button"
-          type="button"
-        >
+        <button id="hideSignupButton" class="signup-link-button" type="button">
           로그인으로 돌아가기
         </button>
       </form>
-      <img
-  class="screen-logo screen-logo-bottom"
-  src="images/center-logo.png"
-  alt="헬스와 필라테스 화곡점"
->
+      <img class="screen-logo screen-logo-bottom" src="images/center-logo.png" alt="헬스와 필라테스 화곡점">
     </div>
   </section>
   <main id="appScreen" class="app" hidden>
-    <img
-  class="screen-logo screen-logo-top"
-  src="images/center-logo.png"
-  alt="헬스와 필라테스 화곡점"
->
-<section
-id="routineTabPanel"
-class="member-tab-panel"
-role="tabpanel"
-aria-labelledby="routineTabButton"
->
-    <header class="header">
-      <p class="label">오늘의 운동</p>
-      <h1>운동을 하나씩<br>완료해 보세요</h1>
-    </header>
-    <div class="member-toolbar">
-      <p>
-        <span>배정 루틴</span>
-        <strong id="assignedRoutineName">불러오는 중...</strong>
-      </p>
+    <img class="screen-logo screen-logo-top" src="images/center-logo.png" alt="헬스와 필라테스 화곡점">
+    <section id="routineTabPanel" class="member-tab-panel" role="tabpanel" aria-labelledby="routineTabButton">
+      <header class="header">
+        <p class="label">오늘의 운동</p>
+        <h1>운동을 하나씩<br>완료해 보세요</h1>
+      </header>
+      <div class="member-toolbar">
+        <p>
+          <span>배정 루틴</span>
+          <strong id="assignedRoutineName">불러오는 중...</strong>
+        </p>
 
-      <button id="logoutButton" type="button">로그아웃</button>
-    </div>
-    <a
-  id="routineRequestButton"
-  class="routine-request-button"
-  href="https://docs.google.com/forms/d/e/1FAIpQLScIH9uLzjwhGlH-RWbn9a7hmEy74MzQNLgN4Tnn4V01KcqKzg/viewform?usp=header"
-  target="_blank"
-  rel="noopener noreferrer"
->
-  ✍️ 새 루틴 신청하기
-</a>
-    <figure class="routine-image">
-      <img id="routineImage" src="images/routine-guide.png" alt="월간 운동 루틴 안내표">
-    </figure>
-    <section id="routineDescription" class="routine-description" hidden></section>
-    <button
-  id="toggleRoutineDescriptionButton"
-  class="toggle-description-button"
-  type="button"
-  hidden
-  aria-expanded="false"
->
-  설명 더 보기
-</button>
-    <button id="openImageButton" class="zoom-button" type="button">
-      🔍 루틴표 크게 보기
-    </button>
-
-    <button id="installButton" class="install-button" type="button" hidden>
-      📲 이 앱을 홈 화면에 설치
-    </button>
-  </section>
-
-  <section
-    id="workoutLogTabPanel"
-    class="member-tab-panel"
-    role="tabpanel"
-    aria-labelledby="workoutLogTabButton"
-    hidden
-  >
-    <header class="header">
-      <p class="label">운동 기록</p>
-      <h1>오늘의 순간을<br>기록해 보세요</h1>
-    </header>
-
-    <section class="workout-calendar-card">
-      <h2>기록 달력</h2>
-
-      <div id="workoutCalendar">
-        <p>캘린더가 이곳에 표시됩니다.</p>
+        <button id="logoutButton" type="button">로그아웃</button>
       </div>
+      <a id="routineRequestButton" class="routine-request-button"
+        href="https://docs.google.com/forms/d/e/1FAIpQLScIH9uLzjwhGlH-RWbn9a7hmEy74MzQNLgN4Tnn4V01KcqKzg/viewform?usp=header"
+        target="_blank" rel="noopener noreferrer">
+        ✍️ 새 루틴 신청하기
+      </a>
+      <figure class="routine-image">
+        <img id="routineImage" src="images/routine-guide.png" alt="월간 운동 루틴 안내표">
+      </figure>
+      <section id="routineDescription" class="routine-description" hidden></section>
+      <button id="toggleRoutineDescriptionButton" class="toggle-description-button" type="button" hidden
+        aria-expanded="false">
+        설명 더 보기
+      </button>
+      <button id="openImageButton" class="zoom-button" type="button">
+        🔍 루틴표 크게 보기
+      </button>
+
+      <button id="installButton" class="install-button" type="button" hidden>
+        📲 이 앱을 홈 화면에 설치
+      </button>
     </section>
 
-    <button
-      id="openWorkoutCameraButton"
-      class="workout-camera-button"
-      type="button"
-    >
-      📷 지금 순간을 기록하기
-    </button>
+    <section id="workoutLogTabPanel" class="member-tab-panel" role="tabpanel" aria-labelledby="workoutLogTabButton"
+      hidden>
+      <header class="header">
+        <p class="label">운동 기록</p>
+        <h1>오늘의 순간을<br>기록해 보세요</h1>
+      </header>
 
-    <section
-      id="workoutRecordList"
-      class="workout-record-list"
-      aria-label="나의 운동 기록"
-    >
-      <p id="emptyWorkoutRecordMessage">
-        아직 저장된 운동 기록이 없습니다.
-      </p>
+      <section class="workout-calendar-card" aria-labelledby="workoutCalendarMonthLabel">
+        <div class="workout-calendar-header">
+          <button id="previousWorkoutMonthButton" class="calendar-month-button" type="button" aria-label="이전 달 보기">
+            ‹
+          </button>
+
+          <h2 id="workoutCalendarMonthLabel">
+            불러오는 중...
+          </h2>
+
+          <button id="nextWorkoutMonthButton" class="calendar-month-button" type="button" aria-label="다음 달 보기">
+            ›
+          </button>
+        </div>
+
+        <div class="workout-calendar-weekdays" aria-hidden="true">
+          <span>일</span>
+          <span>월</span>
+          <span>화</span>
+          <span>수</span>
+          <span>목</span>
+          <span>금</span>
+          <span>토</span>
+        </div>
+
+        <div id="workoutCalendarDays" class="workout-calendar-days" role="grid" aria-label="운동 기록 달력"></div>
+      </section>
+
+      <button id="openWorkoutCameraButton" class="workout-camera-button" type="button">
+        📷 지금 순간을 기록하기
+      </button>
+
+      <section id="workoutRecordList" class="workout-record-list" aria-label="나의 운동 기록">
+        <p id="emptyWorkoutRecordMessage">
+          아직 저장된 운동 기록이 없습니다.
+        </p>
+      </section>
     </section>
-  </section>
 
-  <section
-    id="communityTabPanel"
-    class="member-tab-panel"
-    role="tabpanel"
-    aria-labelledby="communityTabButton"
-    hidden
-  >
-    <header class="header">
-      <p class="label">센터 커뮤니티</p>
-      <h1>센터와 함께<br>소통해 보세요</h1>
-    </header>
+    <section id="communityTabPanel" class="member-tab-panel" role="tabpanel" aria-labelledby="communityTabButton"
+      hidden>
+      <header class="header">
+        <p class="label">센터 커뮤니티</p>
+        <h1>센터와 함께<br>소통해 보세요</h1>
+      </header>
 
-    <section class="community-placeholder">
-      <p>
-        센터 커뮤니티 기능을 준비하고 있습니다.
-      </p>
+      <section class="community-placeholder">
+        <p>
+          센터 커뮤니티 기능을 준비하고 있습니다.
+        </p>
+      </section>
     </section>
-  </section>
-    <img
-  class="screen-logo screen-logo-bottom"
-  src="images/center-logo.png"
-  alt="헬스와 필라테스 화곡점"
->
-<nav
-  class="member-bottom-nav"
-  role="tablist"
-  aria-label="회원 메뉴"
->
-  <button
-    id="routineTabButton"
-    class="member-tab-button is-active"
-    type="button"
-    role="tab"
-    data-member-tab="routine"
-    aria-controls="routineTabPanel"
-    aria-selected="true"
-  >
-    <span aria-hidden="true">🏋️</span>
-    <span>운동 구성</span>
-  </button>
+    <img class="screen-logo screen-logo-bottom" src="images/center-logo.png" alt="헬스와 필라테스 화곡점">
+    <nav class="member-bottom-nav" role="tablist" aria-label="회원 메뉴">
+      <button id="routineTabButton" class="member-tab-button is-active" type="button" role="tab"
+        data-member-tab="routine" aria-controls="routineTabPanel" aria-selected="true">
+        <span aria-hidden="true">🏋️</span>
+        <span>운동 구성</span>
+      </button>
 
-  <button
-    id="workoutLogTabButton"
-    class="member-tab-button"
-    type="button"
-    role="tab"
-    data-member-tab="workoutLog"
-    aria-controls="workoutLogTabPanel"
-    aria-selected="false"
-  >
-    <span aria-hidden="true">📷</span>
-    <span>운동 기록</span>
-  </button>
+      <button id="workoutLogTabButton" class="member-tab-button" type="button" role="tab" data-member-tab="workoutLog"
+        aria-controls="workoutLogTabPanel" aria-selected="false">
+        <span aria-hidden="true">📷</span>
+        <span>운동 기록</span>
+      </button>
 
-  <button
-    id="communityTabButton"
-    class="member-tab-button"
-    type="button"
-    role="tab"
-    data-member-tab="community"
-    aria-controls="communityTabPanel"
-    aria-selected="false"
-  >
-    <span aria-hidden="true">💬</span>
-    <span>센터 커뮤니티</span>
-  </button>
-</nav>
+      <button id="communityTabButton" class="member-tab-button" type="button" role="tab" data-member-tab="community"
+        aria-controls="communityTabPanel" aria-selected="false">
+        <span aria-hidden="true">💬</span>
+        <span>센터 커뮤니티</span>
+      </button>
+    </nav>
   </main>
 
   <main id="adminScreen" class="app admin-screen" hidden>
-    <img
-  class="screen-logo screen-logo-top"
-  src="images/center-logo.png"
-  alt="헬스와 필라테스 화곡점"
->
+    <img class="screen-logo screen-logo-top" src="images/center-logo.png" alt="헬스와 필라테스 화곡점">
     <header class="header">
       <p class="label">관리자 페이지</p>
       <h1>회원 루틴 관리</h1>
@@ -325,16 +217,11 @@ aria-labelledby="routineTabButton"
 
     <section class="admin-card">
       <label for="adminMemberSearch">회원 검색</label>
-    
-      <input
-        id="adminMemberSearch"
-        type="search"
-        placeholder="이름, 전화번호 뒷자리, 이메일 검색"
-        autocomplete="off"
-      >
-    
+
+      <input id="adminMemberSearch" type="search" placeholder="이름, 전화번호 뒷자리, 이메일 검색" autocomplete="off">
+
       <label for="adminMemberSelect">회원 선택</label>
-    
+
       <select id="adminMemberSelect">
         <option value="">회원 목록을 불러오는 중...</option>
       </select>
@@ -354,13 +241,9 @@ aria-labelledby="routineTabButton"
       <img id="adminRoutinePreview" alt="선택한 루틴 이미지 미리보기" hidden>
       <label for="adminRoutineDescription">루틴 설명과 링크</label>
 
-      <textarea
-        id="adminRoutineDescription"
-        rows="9"
-        placeholder="회원에게 보여줄 설명을 입력하세요.
+      <textarea id="adminRoutineDescription" rows="9" placeholder="회원에게 보여줄 설명을 입력하세요.
       
-      링크는 https://... 형식으로 붙여넣으면 자동으로 클릭할 수 있습니다."
-      ></textarea>
+      링크는 https://... 형식으로 붙여넣으면 자동으로 클릭할 수 있습니다."></textarea>
       <button id="saveAdminRoutineButton" type="button">
         회원 루틴 저장
       </button>
@@ -371,13 +254,73 @@ aria-labelledby="routineTabButton"
     <button id="adminLogoutButton" class="zoom-button" type="button">
       로그아웃
     </button>
-    <img
-  class="screen-logo screen-logo-bottom"
-  src="images/center-logo.png"
-  alt="헬스와 필라테스 화곡점"
->
+    <img class="screen-logo screen-logo-bottom" src="images/center-logo.png" alt="헬스와 필라테스 화곡점">
   </main>
 
+  <!-- 운동 기록 카메라 화면 -->
+  <div id="workoutCameraModal" class="workout-camera-modal" hidden>
+    <section class="workout-camera-dialog" role="dialog" aria-modal="true" aria-labelledby="workoutCameraTitle">
+      <header class="workout-camera-header">
+        <h2 id="workoutCameraTitle">
+          지금 순간을 기록하기
+        </h2>
+
+        <button id="closeWorkoutCameraButton" class="camera-text-button" type="button">
+          취소
+        </button>
+      </header>
+
+      <!-- 실시간 카메라 영역 -->
+      <div id="workoutCameraView">
+        <div class="workout-camera-screen">
+          <video id="workoutCameraVideo" autoplay playsinline muted></video>
+
+          <p id="workoutCameraMessage" class="workout-camera-message" aria-live="polite">
+            카메라를 준비하고 있습니다.
+          </p>
+        </div>
+
+        <div class="workout-camera-controls">
+          <span class="camera-control-space"></span>
+
+          <button id="captureWorkoutPhotoButton" class="camera-shutter-button" type="button" aria-label="사진 촬영">
+            <span></span>
+          </button>
+
+          <button id="switchWorkoutCameraButton" class="camera-switch-button" type="button" aria-label="전면 후면 카메라 전환">
+            🔄
+          </button>
+        </div>
+      </div>
+
+      <!-- 촬영 후 폴라로이드 작성 영역 -->
+      <div id="workoutPhotoComposer" hidden>
+        <article class="polaroid-composer">
+          <img id="workoutPhotoPreview" alt="촬영한 운동 기록 사진">
+
+          <textarea id="workoutPhotoCaption" maxlength="120" rows="3" placeholder="오늘의 운동 한마디를 남겨보세요."
+            aria-label="운동 기록 메모"></textarea>
+
+          <time id="workoutPhotoDate"></time>
+        </article>
+
+        <div class="workout-photo-actions">
+          <button id="retakeWorkoutPhotoButton" class="retake-photo-button" type="button">
+            다시 찍기
+          </button>
+
+          <button id="saveWorkoutRecordButton" class="save-workout-record-button" type="button">
+            기록 저장
+          </button>
+        </div>
+
+        <p id="workoutRecordSaveMessage" class="workout-record-save-message" aria-live="polite"></p>
+      </div>
+
+      <!-- 촬영한 사진을 임시로 만드는 캔버스 -->
+      <canvas id="workoutCameraCanvas" hidden></canvas>
+    </section>
+  </div>
   <div id="imageModal" class="image-modal">
     <button id="closeImageButton" class="close-image-button" type="button" aria-label="크게 보기 닫기">
       ×

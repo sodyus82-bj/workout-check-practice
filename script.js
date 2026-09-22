@@ -45,7 +45,10 @@ document.addEventListener("keydown", function (event) {
     closeImageModal();
   }
 });
-if ("serviceWorker" in navigator) {
+if (
+  "serviceWorker" in navigator &&
+  window.location.protocol !== "file:"
+) {
   window.addEventListener("load", () => {
     navigator.serviceWorker
       .register("./service-worker.js")
@@ -115,7 +118,195 @@ window.addEventListener("appinstalled", () => {
 const loginScreen = document.querySelector("#loginScreen");
 const appScreen = document.querySelector("#appScreen");
 const adminScreen = document.querySelector("#adminScreen");
+// 회원 화면 하단 탭
+const memberTabButtons =
+  document.querySelectorAll("[data-member-tab]");
 
+const memberTabPanels = {
+  routine: document.querySelector("#routineTabPanel"),
+  workoutLog: document.querySelector("#workoutLogTabPanel"),
+  community: document.querySelector("#communityTabPanel")
+};
+
+// 선택한 회원 탭 표시
+function showMemberTab(tabName) {
+  const selectedPanel = memberTabPanels[tabName];
+
+  if (!selectedPanel) {
+    return;
+  }
+
+  Object.entries(memberTabPanels).forEach(
+    ([panelName, panel]) => {
+      panel.hidden = panelName !== tabName;
+    }
+  );
+
+  memberTabButtons.forEach((button) => {
+    const isSelected =
+      button.dataset.memberTab === tabName;
+
+    button.classList.toggle("is-active", isSelected);
+    button.setAttribute(
+      "aria-selected",
+      String(isSelected)
+    );
+  });
+
+  window.scrollTo({
+    top: 0,
+    behavior: "smooth"
+  });
+}
+
+// 하단 탭 버튼 클릭 기능
+memberTabButtons.forEach((button) => {
+  button.addEventListener("click", function () {
+    showMemberTab(button.dataset.memberTab);
+  });
+});
+// 운동 기록 캘린더 요소
+const workoutCalendarMonthLabel =
+  document.querySelector("#workoutCalendarMonthLabel");
+
+const workoutCalendarDays =
+  document.querySelector("#workoutCalendarDays");
+
+const previousWorkoutMonthButton =
+  document.querySelector("#previousWorkoutMonthButton");
+
+const nextWorkoutMonthButton =
+  document.querySelector("#nextWorkoutMonthButton");
+
+// 현재 캘린더에 표시할 월
+let visibleWorkoutMonth = new Date();
+visibleWorkoutMonth.setDate(1);
+
+// 나중에 Supabase에서 불러올 기록 날짜
+let workoutRecordDates = new Set();
+
+// 사용자가 선택한 날짜
+let selectedWorkoutDate = "";
+
+// 날짜를 2026-09-22 형태로 만들기
+function makeWorkoutDateKey(year, monthIndex, day) {
+  const month = String(monthIndex + 1).padStart(2, "0");
+  const date = String(day).padStart(2, "0");
+
+  return `${year}-${month}-${date}`;
+}
+
+// 운동 기록 캘린더 그리기
+function renderWorkoutCalendar() {
+  const year = visibleWorkoutMonth.getFullYear();
+  const monthIndex = visibleWorkoutMonth.getMonth();
+
+  const firstWeekday =
+    new Date(year, monthIndex, 1).getDay();
+
+  const lastDate =
+    new Date(year, monthIndex + 1, 0).getDate();
+
+  const today = new Date();
+
+  workoutCalendarMonthLabel.textContent =
+    `${year}년 ${monthIndex + 1}월`;
+
+  workoutCalendarDays.innerHTML = "";
+
+  // 이번 달 1일 앞의 빈칸
+  for (let index = 0; index < firstWeekday; index += 1) {
+    const emptyCell = document.createElement("span");
+    emptyCell.className = "workout-calendar-empty";
+    emptyCell.setAttribute("aria-hidden", "true");
+
+    workoutCalendarDays.append(emptyCell);
+  }
+
+  // 이번 달 날짜
+  for (let day = 1; day <= lastDate; day += 1) {
+    const dateKey =
+      makeWorkoutDateKey(year, monthIndex, day);
+
+    const dateButton = document.createElement("button");
+
+    dateButton.type = "button";
+    dateButton.className = "workout-calendar-day";
+    dateButton.textContent = String(day);
+    dateButton.dataset.date = dateKey;
+
+    dateButton.setAttribute(
+      "aria-label",
+      `${year}년 ${monthIndex + 1}월 ${day}일`
+    );
+
+    const isToday =
+      year === today.getFullYear() &&
+      monthIndex === today.getMonth() &&
+      day === today.getDate();
+
+    if (isToday) {
+      dateButton.classList.add("is-today");
+    }
+
+    if (workoutRecordDates.has(dateKey)) {
+      dateButton.classList.add("has-record");
+    }
+
+    if (selectedWorkoutDate === dateKey) {
+      dateButton.classList.add("is-selected");
+    }
+
+    dateButton.addEventListener("click", function () {
+        selectedWorkoutDate =
+          selectedWorkoutDate === dateKey
+            ? ""
+            : dateKey;
+
+        renderWorkoutCalendar();
+      });
+
+    workoutCalendarDays.append(dateButton);
+  }
+}
+
+// 이전 달 보기
+previousWorkoutMonthButton.addEventListener(
+  "click",
+  function () {
+    visibleWorkoutMonth.setMonth(
+      visibleWorkoutMonth.getMonth() - 1
+    );
+
+    selectedWorkoutDate = "";
+    renderWorkoutCalendar();
+  }
+);
+
+// 다음 달 보기
+nextWorkoutMonthButton.addEventListener(
+  "click",
+  function () {
+    visibleWorkoutMonth.setMonth(
+      visibleWorkoutMonth.getMonth() + 1
+    );
+
+    selectedWorkoutDate = "";
+    renderWorkoutCalendar();
+  }
+);
+
+// 로그인할 때 이번 달로 초기화
+function resetWorkoutCalendar() {
+  visibleWorkoutMonth = new Date();
+  visibleWorkoutMonth.setDate(1);
+  selectedWorkoutDate = "";
+
+  renderWorkoutCalendar();
+}
+
+// 페이지가 처음 열렸을 때 달력 표시
+renderWorkoutCalendar();
 const loginForm = document.querySelector("#loginForm");
 const loginEmail = document.querySelector("#loginEmail");
 const loginPassword = document.querySelector("#loginPassword");
@@ -273,6 +464,9 @@ async function showWorkoutApp(userId) {
   adminScreen.hidden = true;
   appScreen.hidden = false;
 
+  showMemberTab("routine");
+  resetWorkoutCalendar();
+
   await loadMemberRoutine(userId);
 }
 
@@ -283,10 +477,10 @@ async function loadAdminMembers() {
     { data: routines, error: routinesError }
   ] = await Promise.all([
     supabaseClient
-    .from("profiles")
-    .select("id, display_name, email, phone_last4, created_at")
-    .eq("role", "member")
-    .order("created_at", { ascending: false }),
+      .from("profiles")
+      .select("id, display_name, email, phone_last4, created_at")
+      .eq("role", "member")
+      .order("created_at", { ascending: false }),
 
     supabaseClient
       .from("member_routines")
@@ -366,15 +560,15 @@ async function loadAdminMembers() {
       `${memberName}${phoneText} · ` +
       `${summary.assignmentCount}회 배정 · ${routineStatus}`;
 
-      adminMemberSelect.append(option);
-    });
-  
-    adminMemberOptionCache = Array.from(
-      adminMemberSelect.options
-    )
-      .slice(1)
-      .map((option) => option.cloneNode(true));
-  }
+    adminMemberSelect.append(option);
+  });
+
+  adminMemberOptionCache = Array.from(
+    adminMemberSelect.options
+  )
+    .slice(1)
+    .map((option) => option.cloneNode(true));
+}
 // 관리자 회원 검색
 adminMemberSearch.addEventListener("input", function () {
   const searchText =
@@ -505,33 +699,33 @@ adminMemberSelect.addEventListener("change", async function () {
   adminMemberInfo.textContent = currentRoutineName
     ? `${memberName}${emailText} · 총 ${assignmentCount}회 배정 · 현재 루틴: ${currentRoutineName}`
     : `${memberName}${emailText} · 총 ${assignmentCount}회 배정 · 현재 루틴 없음`;
-    const currentRoutineImagePath =
-  selectedOption.dataset.currentRoutineImagePath || "";
+  const currentRoutineImagePath =
+    selectedOption.dataset.currentRoutineImagePath || "";
 
-if (currentRoutineImagePath) {
-  const {
-    data: signedImageData,
-    error: signedImageError
-  } = await supabaseClient.storage
-    .from("routine-images")
-    .createSignedUrl(currentRoutineImagePath, 3600);
+  if (currentRoutineImagePath) {
+    const {
+      data: signedImageData,
+      error: signedImageError
+    } = await supabaseClient.storage
+      .from("routine-images")
+      .createSignedUrl(currentRoutineImagePath, 3600);
 
-  // 이미지를 불러오는 동안 다른 회원을 선택한 경우 중단
-  if (adminMemberSelect.value !== selectedOption.value) {
-    return;
+    // 이미지를 불러오는 동안 다른 회원을 선택한 경우 중단
+    if (adminMemberSelect.value !== selectedOption.value) {
+      return;
+    }
+
+    if (signedImageError) {
+      console.error(
+        "현재 루틴 이미지 불러오기 실패:",
+        signedImageError
+      );
+      return;
+    }
+
+    adminRoutinePreview.src = signedImageData.signedUrl;
+    adminRoutinePreview.hidden = false;
   }
-
-  if (signedImageError) {
-    console.error(
-      "현재 루틴 이미지 불러오기 실패:",
-      signedImageError
-    );
-    return;
-  }
-
-  adminRoutinePreview.src = signedImageData.signedUrl;
-  adminRoutinePreview.hidden = false;
-}
 });
 adminRoutineImage.addEventListener("change", function () {
   const selectedFile = adminRoutineImage.files[0];
@@ -582,90 +776,90 @@ saveAdminRoutineButton.addEventListener("click", async function () {
     adminSaveMessage.textContent =
       "루틴 이미지를 저장 중입니다...";
 
-  const safeFileName = selectedFile.name.replace(/[^a-zA-Z0-9._-]/g, "_");
-  const imagePath = `${userId}/${Date.now()}-${safeFileName}`;
+    const safeFileName = selectedFile.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+    const imagePath = `${userId}/${Date.now()}-${safeFileName}`;
 
-  const { error: uploadError } = await supabaseClient.storage
-    .from("routine-images")
-    .upload(imagePath, selectedFile, {
-      cacheControl: "3600",
-      upsert: false
-    });
-
-  if (uploadError) {
-    console.error("이미지 업로드 실패:", uploadError);
-    adminSaveMessage.textContent = "이미지를 저장하지 못했습니다.";
-    saveAdminRoutineButton.disabled = false;
-    return;
-  }
-
-  const { data: newRoutine, error: insertError } = await supabaseClient
-    .from("member_routines")
-    .insert({
-      user_id: userId,
-      routine_name: routineName,
-      routine_image_url: "",
-      routine_image_path: imagePath,
-      routine_description: description,
-      is_active: true
-    })
-    .select("id")
-    .single();
-
-  if (insertError) {
-    console.error("루틴 정보 저장 실패:", insertError);
-
-    // 데이터 저장에 실패했으므로 방금 업로드한 이미지를 삭제
-    const { error: cleanupError } = await supabaseClient.storage
+    const { error: uploadError } = await supabaseClient.storage
       .from("routine-images")
-      .remove([imagePath]);
+      .upload(imagePath, selectedFile, {
+        cacheControl: "3600",
+        upsert: false
+      });
 
-    if (cleanupError) {
-      console.error(
-        "저장 실패 이미지 정리 실패:",
-        cleanupError
-      );
+    if (uploadError) {
+      console.error("이미지 업로드 실패:", uploadError);
+      adminSaveMessage.textContent = "이미지를 저장하지 못했습니다.";
+      saveAdminRoutineButton.disabled = false;
+      return;
     }
 
+    const { data: newRoutine, error: insertError } = await supabaseClient
+      .from("member_routines")
+      .insert({
+        user_id: userId,
+        routine_name: routineName,
+        routine_image_url: "",
+        routine_image_path: imagePath,
+        routine_description: description,
+        is_active: true
+      })
+      .select("id")
+      .single();
+
+    if (insertError) {
+      console.error("루틴 정보 저장 실패:", insertError);
+
+      // 데이터 저장에 실패했으므로 방금 업로드한 이미지를 삭제
+      const { error: cleanupError } = await supabaseClient.storage
+        .from("routine-images")
+        .remove([imagePath]);
+
+      if (cleanupError) {
+        console.error(
+          "저장 실패 이미지 정리 실패:",
+          cleanupError
+        );
+      }
+
+      adminSaveMessage.textContent =
+        "루틴 정보를 저장하지 못했습니다.";
+
+      saveAdminRoutineButton.disabled = false;
+      return;
+    }
+
+
+
+    adminRoutineImage.value = "";
+    adminRoutineDescription.value = "";
+    adminMemberSearch.value = "";
+
+    // 저장된 최신 정보를 다시 불러오기
+    await loadAdminMembers();
+
+    // 방금 루틴을 저장한 회원을 다시 선택
+    adminMemberSelect.value = userId;
+
+    adminMemberSelect.dispatchEvent(
+      new Event("change")
+    );
+
     adminSaveMessage.textContent =
-      "루틴 정보를 저장하지 못했습니다.";
+      "저장했습니다. 최신 루틴 정보로 갱신되었습니다.";
 
+  } catch (unexpectedError) {
+    console.error(
+      "루틴 저장 중 예상하지 못한 오류:",
+      unexpectedError
+    );
+
+    adminSaveMessage.textContent =
+      "작업 중 오류가 발생했습니다. " +
+      "화면을 새로고침하여 저장 결과를 확인해 주세요.";
+
+  } finally {
     saveAdminRoutineButton.disabled = false;
-    return;
   }
-
-
-
-  adminRoutineImage.value = "";
-  adminRoutineDescription.value = "";
-  adminMemberSearch.value = "";
-  
-  // 저장된 최신 정보를 다시 불러오기
-  await loadAdminMembers();
-  
-  // 방금 루틴을 저장한 회원을 다시 선택
-  adminMemberSelect.value = userId;
-  
-  adminMemberSelect.dispatchEvent(
-    new Event("change")
-  );
-  
-  adminSaveMessage.textContent =
-  "저장했습니다. 최신 루틴 정보로 갱신되었습니다.";
-
-} catch (unexpectedError) {
-  console.error(
-    "루틴 저장 중 예상하지 못한 오류:",
-    unexpectedError
-  );
-
-  adminSaveMessage.textContent =
-    "작업 중 오류가 발생했습니다. " +
-    "화면을 새로고침하여 저장 결과를 확인해 주세요.";
-
-} finally {
-  saveAdminRoutineButton.disabled = false;
-}
 });
 // 로그인 버튼 기능
 loginForm.addEventListener("submit", async function (event) {
@@ -750,68 +944,68 @@ async function handleLogout() {
   try {
     const { error } = await supabaseClient.auth.signOut();
 
-  if (error) {
-    alert("로그아웃하지 못했습니다. 다시 시도해 주세요.");
-    return;
-  }
+    if (error) {
+      alert("로그아웃하지 못했습니다. 다시 시도해 주세요.");
+      return;
+    }
 
-  // 회원·관리자 화면을 숨기고 로그인 화면 표시
-  appScreen.hidden = true;
-  adminScreen.hidden = true;
-  loginScreen.hidden = false;
+    // 회원·관리자 화면을 숨기고 로그인 화면 표시
+    appScreen.hidden = true;
+    adminScreen.hidden = true;
+    loginScreen.hidden = false;
 
-  // 회원가입 화면이 열려 있었다면 기본 로그인 화면으로 복구
-  signupForm.hidden = true;
-  loginForm.hidden = false;
-  showSignupButton.hidden = false;
+    // 회원가입 화면이 열려 있었다면 기본 로그인 화면으로 복구
+    signupForm.hidden = true;
+    loginForm.hidden = false;
+    showSignupButton.hidden = false;
 
-  // 입력값과 안내 메시지 초기화
-  loginForm.reset();
-  signupForm.reset();
-  loginMessage.textContent = "";
-  signupMessage.textContent = "";
+    // 입력값과 안내 메시지 초기화
+    loginForm.reset();
+    signupForm.reset();
+    loginMessage.textContent = "";
+    signupMessage.textContent = "";
 
-  // 버튼 상태 초기화
-  loginButton.disabled = false;
-  signupButton.disabled = false;
-  
-  // 관리자 화면 상태 초기화
-adminMemberSearch.value = "";
-adminMemberSelect.innerHTML =
-  '<option value="">루틴을 관리할 회원을 선택하세요.</option>';
+    // 버튼 상태 초기화
+    loginButton.disabled = false;
+    signupButton.disabled = false;
 
-adminMemberOptionCache = [];
-adminRoutineEditor.hidden = true;
+    // 관리자 화면 상태 초기화
+    adminMemberSearch.value = "";
+    adminMemberSelect.innerHTML =
+      '<option value="">루틴을 관리할 회원을 선택하세요.</option>';
 
-adminMemberInfo.textContent =
-  "루틴을 관리할 회원을 선택해 주세요.";
+    adminMemberOptionCache = [];
+    adminRoutineEditor.hidden = true;
 
-adminRoutineName.value = "";
-adminRoutineImage.value = "";
-adminRoutineDescription.value = "";
+    adminMemberInfo.textContent =
+      "루틴을 관리할 회원을 선택해 주세요.";
 
-adminRoutinePreview.hidden = true;
-adminRoutinePreview.removeAttribute("src");
+    adminRoutineName.value = "";
+    adminRoutineImage.value = "";
+    adminRoutineDescription.value = "";
 
-adminSaveMessage.textContent = "";
-saveAdminRoutineButton.disabled = false;
+    adminRoutinePreview.hidden = true;
+    adminRoutinePreview.removeAttribute("src");
 
-  // 비밀번호 입력창과 눈 버튼 초기화
-  document
-    .querySelectorAll("[data-password-toggle]")
-    .forEach((button) => {
-      const passwordInput = document.querySelector(
-        `#${button.dataset.passwordToggle}`
-      );
+    adminSaveMessage.textContent = "";
+    saveAdminRoutineButton.disabled = false;
 
-      if (passwordInput) {
-        passwordInput.type = "password";
-      }
+    // 비밀번호 입력창과 눈 버튼 초기화
+    document
+      .querySelectorAll("[data-password-toggle]")
+      .forEach((button) => {
+        const passwordInput = document.querySelector(
+          `#${button.dataset.passwordToggle}`
+        );
 
-      button.textContent = "👁";
-      button.setAttribute("aria-label", "비밀번호 보기");
-      button.setAttribute("aria-pressed", "false");
-    });
+        if (passwordInput) {
+          passwordInput.type = "password";
+        }
+
+        button.textContent = "👁";
+        button.setAttribute("aria-label", "비밀번호 보기");
+        button.setAttribute("aria-pressed", "false");
+      });
 
   } catch (unexpectedError) {
     console.error(
@@ -890,54 +1084,54 @@ signupForm.addEventListener("submit", async function (event) {
   }
 
   signupMessage.textContent = "회원가입 중...";
-signupButton.disabled = true;
+  signupButton.disabled = true;
 
-try {
-  const { data, error } =
-    await supabaseClient.auth.signUp({
-      email: signupEmail.value.trim(),
-      password: signupPassword.value,
-      options: {
-        data: {
-          display_name: name,
-          phone_last4: phoneLast4
+  try {
+    const { data, error } =
+      await supabaseClient.auth.signUp({
+        email: signupEmail.value.trim(),
+        password: signupPassword.value,
+        options: {
+          data: {
+            display_name: name,
+            phone_last4: phoneLast4
+          }
         }
-      }
-    });
+      });
 
-  if (error) {
+    if (error) {
+      signupMessage.textContent =
+        error.message === "User already registered"
+          ? "이미 가입된 이메일입니다."
+          : "회원가입하지 못했습니다. 다시 시도해 주세요.";
+
+      return;
+    }
+
+    if (!data.session) {
+      signupMessage.textContent =
+        "회원가입은 완료됐습니다. " +
+        "이메일 인증 설정을 다시 확인해 주세요.";
+
+      return;
+    }
+
+    signupForm.reset();
+
+    await initializeLogin();
+
+  } catch (unexpectedError) {
+    console.error(
+      "회원가입 중 예상하지 못한 오류:",
+      unexpectedError
+    );
+
     signupMessage.textContent =
-      error.message === "User already registered"
-        ? "이미 가입된 이메일입니다."
-        : "회원가입하지 못했습니다. 다시 시도해 주세요.";
+      "네트워크 연결을 확인하고 다시 시도해 주세요.";
 
-    return;
+  } finally {
+    signupButton.disabled = false;
   }
-
-  if (!data.session) {
-    signupMessage.textContent =
-      "회원가입은 완료됐습니다. " +
-      "이메일 인증 설정을 다시 확인해 주세요.";
-
-    return;
-  }
-
-  signupForm.reset();
-
-  await initializeLogin();
-
-} catch (unexpectedError) {
-  console.error(
-    "회원가입 중 예상하지 못한 오류:",
-    unexpectedError
-  );
-
-  signupMessage.textContent =
-    "네트워크 연결을 확인하고 다시 시도해 주세요.";
-
-} finally {
-  signupButton.disabled = false;
-}
 });
 document.querySelectorAll("[data-password-toggle]").forEach((button) => {
   button.addEventListener("click", function () {
