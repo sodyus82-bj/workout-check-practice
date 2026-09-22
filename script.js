@@ -311,6 +311,9 @@ renderWorkoutCalendar();
 const openWorkoutCameraButton =
   document.querySelector("#openWorkoutCameraButton");
 
+const workoutNativeCameraInput =
+  document.querySelector("#workoutNativeCameraInput");
+
 const workoutCameraModal =
   document.querySelector("#workoutCameraModal");
 
@@ -420,24 +423,24 @@ async function startWorkoutCamera() {
     }
 
     const cameraStream =
-    await navigator.mediaDevices.getUserMedia({
-      audio: false,
-      video: {
-        facingMode: {
-          ideal: workoutCameraFacingMode
-        },
-        width: {
-          ideal: 1200
-        },
-        height: {
-          ideal: 1600
-        },
-        aspectRatio: {
-          ideal: 3 / 4
-        },
-        resizeMode: "crop-and-scale"
-      }
-    });
+      await navigator.mediaDevices.getUserMedia({
+        audio: false,
+        video: {
+          facingMode: {
+            ideal: workoutCameraFacingMode
+          },
+          width: {
+            ideal: 1200
+          },
+          height: {
+            ideal: 1600
+          },
+          aspectRatio: {
+            ideal: 3 / 4
+          },
+          resizeMode: "crop-and-scale"
+        }
+      });
 
     // 기다리는 동안 화면을 닫았거나 다른 카메라로 바꾼 경우
     if (
@@ -631,19 +634,59 @@ async function captureWorkoutPhoto() {
 }
 
 // 다시 찍기
-async function retakeWorkoutPhoto() {
-  clearCapturedWorkoutPhoto();
-
-  workoutPhotoComposer.hidden = true;
-  workoutCameraView.hidden = false;
-
-  await startWorkoutCamera();
+function retakeWorkoutPhoto() {
+  workoutNativeCameraInput.value = "";
+  workoutNativeCameraInput.click();
 }
 
 // 카메라 버튼 기능 연결
 openWorkoutCameraButton.addEventListener(
   "click",
-  openWorkoutCamera
+  function () {
+    workoutNativeCameraInput.value = "";
+    workoutNativeCameraInput.click();
+  }
+);
+
+workoutNativeCameraInput.addEventListener(
+  "change",
+  function () {
+    const capturedFile =
+      workoutNativeCameraInput.files[0];
+
+    // 촬영을 취소한 경우 아무 작업도 하지 않음
+    if (!capturedFile) {
+      return;
+    }
+
+    clearCapturedWorkoutPhoto();
+    stopWorkoutCamera();
+
+    capturedWorkoutPhotoBlob = capturedFile;
+    workoutPhotoTakenAt = new Date();
+    workoutPhotoPreviewUrl =
+      URL.createObjectURL(capturedFile);
+
+    workoutPhotoPreview.src =
+      workoutPhotoPreviewUrl;
+
+    workoutPhotoDate.textContent =
+      new Intl.DateTimeFormat("ko-KR", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit"
+      }).format(workoutPhotoTakenAt);
+
+    workoutCameraModal.hidden = false;
+    workoutCameraView.hidden = true;
+    workoutPhotoComposer.hidden = false;
+
+    document.body.classList.add("camera-open");
+
+    workoutPhotoCaption.focus();
+  }
 );
 
 closeWorkoutCameraButton.addEventListener(
