@@ -577,7 +577,10 @@ saveAdminRoutineButton.addEventListener("click", async function () {
   }
 
   saveAdminRoutineButton.disabled = true;
-  adminSaveMessage.textContent = "루틴 이미지를 저장 중입니다...";
+
+  try {
+    adminSaveMessage.textContent =
+      "루틴 이미지를 저장 중입니다...";
 
   const safeFileName = selectedFile.name.replace(/[^a-zA-Z0-9._-]/g, "_");
   const imagePath = `${userId}/${Date.now()}-${safeFileName}`;
@@ -633,12 +636,36 @@ saveAdminRoutineButton.addEventListener("click", async function () {
 
 
 
-  adminSaveMessage.textContent =
-    "저장했습니다. 회원이 다시 로그인하면 새 루틴이 표시됩니다.";
-
   adminRoutineImage.value = "";
   adminRoutineDescription.value = "";
+  adminMemberSearch.value = "";
+  
+  // 저장된 최신 정보를 다시 불러오기
+  await loadAdminMembers();
+  
+  // 방금 루틴을 저장한 회원을 다시 선택
+  adminMemberSelect.value = userId;
+  
+  adminMemberSelect.dispatchEvent(
+    new Event("change")
+  );
+  
+  adminSaveMessage.textContent =
+  "저장했습니다. 최신 루틴 정보로 갱신되었습니다.";
+
+} catch (unexpectedError) {
+  console.error(
+    "루틴 저장 중 예상하지 못한 오류:",
+    unexpectedError
+  );
+
+  adminSaveMessage.textContent =
+    "작업 중 오류가 발생했습니다. " +
+    "화면을 새로고침하여 저장 결과를 확인해 주세요.";
+
+} finally {
   saveAdminRoutineButton.disabled = false;
+}
 });
 // 로그인 버튼 기능
 loginForm.addEventListener("submit", async function (event) {
@@ -647,38 +674,81 @@ loginForm.addEventListener("submit", async function (event) {
   loginMessage.textContent = "로그인 중...";
   loginButton.disabled = true;
 
-  const { error } = await supabaseClient.auth.signInWithPassword({
-    email: loginEmail.value.trim(),
-    password: loginPassword.value
-  });
+  try {
+    const { error } =
+      await supabaseClient.auth.signInWithPassword({
+        email: loginEmail.value.trim(),
+        password: loginPassword.value
+      });
 
-  if (error) {
-    loginMessage.textContent = "이메일 또는 비밀번호를 확인해 주세요.";
+    if (error) {
+      loginMessage.textContent =
+        "이메일 또는 비밀번호를 확인해 주세요.";
+      return;
+    }
+
+    loginMessage.textContent = "";
+    loginForm.reset();
+
+    await showScreenForCurrentUser();
+
+  } catch (unexpectedError) {
+    console.error(
+      "로그인 중 예상하지 못한 오류:",
+      unexpectedError
+    );
+
+    loginMessage.textContent =
+      "네트워크 연결을 확인하고 다시 시도해 주세요.";
+
+  } finally {
     loginButton.disabled = false;
-    return;
   }
-
-  loginMessage.textContent = "";
-  loginForm.reset();
-  loginButton.disabled = false;
-
-  await showScreenForCurrentUser();
 });
 
 // 이미 로그인한 상태인지 확인
 async function initializeLogin() {
-  const {
-    data: { session }
-  } = await supabaseClient.auth.getSession();
+  try {
+    const {
+      data: { session },
+      error: sessionError
+    } = await supabaseClient.auth.getSession();
 
-  if (session) {
-    await showScreenForCurrentUser();
+    if (sessionError) {
+      console.error(
+        "로그인 상태 확인 실패:",
+        sessionError
+      );
+
+      loginMessage.textContent =
+        "로그인 상태를 확인하지 못했습니다. " +
+        "잠시 후 다시 시도해 주세요.";
+
+      return;
+    }
+
+    if (session) {
+      await showScreenForCurrentUser();
+    }
+
+  } catch (unexpectedError) {
+    console.error(
+      "로그인 상태 확인 중 예상하지 못한 오류:",
+      unexpectedError
+    );
+
+    loginMessage.textContent =
+      "네트워크 연결을 확인해 주세요.";
   }
 }
 
 // 로그아웃 공통 기능
 async function handleLogout() {
-  const { error } = await supabaseClient.auth.signOut();
+  logoutButton.disabled = true;
+  adminLogoutButton.disabled = true;
+
+  try {
+    const { error } = await supabaseClient.auth.signOut();
 
   if (error) {
     alert("로그아웃하지 못했습니다. 다시 시도해 주세요.");
@@ -704,6 +774,27 @@ async function handleLogout() {
   // 버튼 상태 초기화
   loginButton.disabled = false;
   signupButton.disabled = false;
+  
+  // 관리자 화면 상태 초기화
+adminMemberSearch.value = "";
+adminMemberSelect.innerHTML =
+  '<option value="">루틴을 관리할 회원을 선택하세요.</option>';
+
+adminMemberOptionCache = [];
+adminRoutineEditor.hidden = true;
+
+adminMemberInfo.textContent =
+  "루틴을 관리할 회원을 선택해 주세요.";
+
+adminRoutineName.value = "";
+adminRoutineImage.value = "";
+adminRoutineDescription.value = "";
+
+adminRoutinePreview.hidden = true;
+adminRoutinePreview.removeAttribute("src");
+
+adminSaveMessage.textContent = "";
+saveAdminRoutineButton.disabled = false;
 
   // 비밀번호 입력창과 눈 버튼 초기화
   document
@@ -721,6 +812,19 @@ async function handleLogout() {
       button.setAttribute("aria-label", "비밀번호 보기");
       button.setAttribute("aria-pressed", "false");
     });
+
+  } catch (unexpectedError) {
+    console.error(
+      "로그아웃 중 예상하지 못한 오류:",
+      unexpectedError
+    );
+
+    alert("네트워크 연결을 확인하고 다시 시도해 주세요.");
+
+  } finally {
+    logoutButton.disabled = false;
+    adminLogoutButton.disabled = false;
+  }
 }
 
 logoutButton.addEventListener("click", handleLogout);
@@ -786,18 +890,20 @@ signupForm.addEventListener("submit", async function (event) {
   }
 
   signupMessage.textContent = "회원가입 중...";
-  signupButton.disabled = true;
+signupButton.disabled = true;
 
-  const { data, error } = await supabaseClient.auth.signUp({
-    email: signupEmail.value.trim(),
-    password: signupPassword.value,
-    options: {
-      data: {
-        display_name: name,
-        phone_last4: phoneLast4
+try {
+  const { data, error } =
+    await supabaseClient.auth.signUp({
+      email: signupEmail.value.trim(),
+      password: signupPassword.value,
+      options: {
+        data: {
+          display_name: name,
+          phone_last4: phoneLast4
+        }
       }
-    }
-  });
+    });
 
   if (error) {
     signupMessage.textContent =
@@ -805,22 +911,33 @@ signupForm.addEventListener("submit", async function (event) {
         ? "이미 가입된 이메일입니다."
         : "회원가입하지 못했습니다. 다시 시도해 주세요.";
 
-    signupButton.disabled = false;
     return;
   }
 
   if (!data.session) {
     signupMessage.textContent =
-      "회원가입은 완료됐습니다. 이메일 인증 설정을 다시 확인해 주세요.";
+      "회원가입은 완료됐습니다. " +
+      "이메일 인증 설정을 다시 확인해 주세요.";
 
-    signupButton.disabled = false;
     return;
   }
 
   signupForm.reset();
-  signupButton.disabled = false;
 
   await initializeLogin();
+
+} catch (unexpectedError) {
+  console.error(
+    "회원가입 중 예상하지 못한 오류:",
+    unexpectedError
+  );
+
+  signupMessage.textContent =
+    "네트워크 연결을 확인하고 다시 시도해 주세요.";
+
+} finally {
+  signupButton.disabled = false;
+}
 });
 document.querySelectorAll("[data-password-toggle]").forEach((button) => {
   button.addEventListener("click", function () {
