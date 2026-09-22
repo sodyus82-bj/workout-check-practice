@@ -155,6 +155,12 @@
   src="images/center-logo.png"
   alt="헬스와 필라테스 화곡점"
 >
+<section
+id="routineTabPanel"
+class="member-tab-panel"
+role="tabpanel"
+aria-labelledby="routineTabButton"
+>
     <header class="header">
       <p class="label">오늘의 운동</p>
       <h1>운동을 하나씩<br>완료해 보세요</h1>
@@ -196,11 +202,114 @@
     <button id="installButton" class="install-button" type="button" hidden>
       📲 이 앱을 홈 화면에 설치
     </button>
+  </section>
+
+  <section
+    id="workoutLogTabPanel"
+    class="member-tab-panel"
+    role="tabpanel"
+    aria-labelledby="workoutLogTabButton"
+    hidden
+  >
+    <header class="header">
+      <p class="label">운동 기록</p>
+      <h1>오늘의 순간을<br>기록해 보세요</h1>
+    </header>
+
+    <section class="workout-calendar-card">
+      <h2>기록 달력</h2>
+
+      <div id="workoutCalendar">
+        <p>캘린더가 이곳에 표시됩니다.</p>
+      </div>
+    </section>
+
+    <button
+      id="openWorkoutCameraButton"
+      class="workout-camera-button"
+      type="button"
+    >
+      📷 지금 순간을 기록하기
+    </button>
+
+    <section
+      id="workoutRecordList"
+      class="workout-record-list"
+      aria-label="나의 운동 기록"
+    >
+      <p id="emptyWorkoutRecordMessage">
+        아직 저장된 운동 기록이 없습니다.
+      </p>
+    </section>
+  </section>
+
+  <section
+    id="communityTabPanel"
+    class="member-tab-panel"
+    role="tabpanel"
+    aria-labelledby="communityTabButton"
+    hidden
+  >
+    <header class="header">
+      <p class="label">센터 커뮤니티</p>
+      <h1>센터와 함께<br>소통해 보세요</h1>
+    </header>
+
+    <section class="community-placeholder">
+      <p>
+        센터 커뮤니티 기능을 준비하고 있습니다.
+      </p>
+    </section>
+  </section>
     <img
   class="screen-logo screen-logo-bottom"
   src="images/center-logo.png"
   alt="헬스와 필라테스 화곡점"
 >
+<nav
+  class="member-bottom-nav"
+  role="tablist"
+  aria-label="회원 메뉴"
+>
+  <button
+    id="routineTabButton"
+    class="member-tab-button is-active"
+    type="button"
+    role="tab"
+    data-member-tab="routine"
+    aria-controls="routineTabPanel"
+    aria-selected="true"
+  >
+    <span aria-hidden="true">🏋️</span>
+    <span>운동 구성</span>
+  </button>
+
+  <button
+    id="workoutLogTabButton"
+    class="member-tab-button"
+    type="button"
+    role="tab"
+    data-member-tab="workoutLog"
+    aria-controls="workoutLogTabPanel"
+    aria-selected="false"
+  >
+    <span aria-hidden="true">📷</span>
+    <span>운동 기록</span>
+  </button>
+
+  <button
+    id="communityTabButton"
+    class="member-tab-button"
+    type="button"
+    role="tab"
+    data-member-tab="community"
+    aria-controls="communityTabPanel"
+    aria-selected="false"
+  >
+    <span aria-hidden="true">💬</span>
+    <span>센터 커뮤니티</span>
+  </button>
+</nav>
   </main>
 
   <main id="adminScreen" class="app admin-screen" hidden>

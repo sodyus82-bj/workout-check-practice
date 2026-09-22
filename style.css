@@ -702,3 +702,99 @@ body {
   font-size: 20px;
   line-height: 1;
 }
+/* 회원 화면 하단 탭 공간 확보 */
+#appScreen {
+  padding-bottom: calc(110px + env(safe-area-inset-bottom));
+}
+
+/* 회원용 하단 탭 */
+.member-bottom-nav {
+  position: fixed;
+  left: 50%;
+  bottom: 0;
+  z-index: 500;
+
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+
+  width: 100%;
+  max-width: 430px;
+  padding:
+    8px
+    8px
+    calc(8px + env(safe-area-inset-bottom));
+
+  background-color: rgba(255, 255, 255, 0.96);
+  border-top: 1px solid var(--brand-border);
+  box-shadow: 0 -6px 20px rgba(23, 35, 62, 0.1);
+  transform: translateX(-50%);
+  backdrop-filter: blur(12px);
+}
+
+/* 하단의 각 탭 버튼 */
+.member-tab-button {
+  position: relative;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+
+  min-width: 0;
+  min-height: 58px;
+  padding: 7px 3px;
+
+  color: #7b8493;
+  background-color: transparent;
+  border: 0;
+  border-radius: 12px;
+
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.2;
+
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* 탭 아이콘 */
+.member-tab-button span:first-child {
+  font-size: 19px;
+  line-height: 1;
+}
+
+/* 선택된 탭 */
+.member-tab-button.is-active {
+  color: var(--brand-orange);
+  background-color: #fff3e8;
+}
+
+/* 선택된 탭 상단 표시선 */
+.member-tab-button.is-active::before {
+  position: absolute;
+  top: -8px;
+  left: 50%;
+
+  width: 38px;
+  height: 3px;
+
+  background-color: var(--brand-orange);
+  border-radius: 0 0 4px 4px;
+  transform: translateX(-50%);
+
+  content: "";
+}
+
+/* 키보드로 선택했을 때 */
+.member-tab-button:focus-visible {
+  outline: 3px solid rgba(245, 106, 0, 0.25);
+  outline-offset: -3px;
+}
+
+/* 탭 화면 숨김 처리 */
+.member-tab-panel[hidden] {
+  display: none !important;
+}
