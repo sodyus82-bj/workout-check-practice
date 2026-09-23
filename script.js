@@ -103,14 +103,14 @@ const communityStatusMessage =
 
 // 선택한 회원 탭 표시
 function showMemberTab(tabName) {
-    // 센터 커뮤니티를 벗어나면 재생 중인 영상 정지
-    if (
-      tabName !== "community" &&
-      activeCommunityVideoArea
-    ) {
-      activeCommunityVideoArea
-        .resetCommunityVideo();
-    }
+  // 센터 커뮤니티를 벗어나면 재생 중인 영상 정지
+  if (
+    tabName !== "community" &&
+    activeCommunityVideoArea
+  ) {
+    activeCommunityVideoArea
+      .resetCommunityVideo();
+  }
   const selectedPanel = memberTabPanels[tabName];
 
   if (!selectedPanel) {
@@ -704,17 +704,17 @@ function renderCommunityPosts(posts) {
     postCard.className =
       "community-post-card";
 
-      const postImages =
+    const postImages =
       post.community_post_images || [];
-    
+
     const imageCarousel =
       postImages.length > 0
         ? createCommunityImageCarousel(
-            postImages,
-            post.title
-          )
+          postImages,
+          post.title
+        )
         : null;
-    
+
     const videoArea =
       createCommunityVideoFacade(
         post.video_url,
@@ -778,11 +778,11 @@ function renderCommunityPosts(posts) {
     if (imageCarousel) {
       postCard.append(imageCarousel);
     }
-    
+
     if (videoArea) {
       postCard.append(videoArea);
     }
-    
+
     postCard.append(postContent);
 
     if (postIndex > 0) {
@@ -827,6 +827,7 @@ async function loadCommunityPosts() {
         title,
         body,
         video_url,
+        display_order,
         published_at,
         community_post_images (
           id,
@@ -836,6 +837,10 @@ async function loadCommunityPosts() {
         )
       `)
       .eq("is_published", true)
+      .order(
+        "display_order",
+        { ascending: true }
+      )
       .order(
         "published_at",
         { ascending: false }
@@ -2364,6 +2369,126 @@ let editingAdminCommunityPostId = null;
 let existingAdminCommunityImages = [];
 let removedAdminCommunityImages = [];
 
+let isMovingAdminCommunityPost = false;
+
+// 관리자 센터 소식 순서 변경
+async function moveAdminCommunityPost(
+  postIndex,
+  direction,
+  moveButton
+) {
+  if (isMovingAdminCommunityPost) {
+    return;
+  }
+
+  const targetIndex =
+    postIndex + direction;
+
+  if (
+    targetIndex < 0 ||
+    targetIndex >=
+      loadedAdminCommunityPosts.length
+  ) {
+    return;
+  }
+
+  const currentPost =
+    loadedAdminCommunityPosts[postIndex];
+
+  const targetPost =
+    loadedAdminCommunityPosts[targetIndex];
+
+  const currentOrder =
+    currentPost.display_order;
+
+  const targetOrder =
+    targetPost.display_order;
+
+  isMovingAdminCommunityPost = true;
+  moveButton.disabled = true;
+
+  adminCommunityListMessage.textContent =
+    "소식 순서를 변경하고 있습니다.";
+
+  let firstUpdateFinished = false;
+
+  try {
+    const {
+      error: currentUpdateError
+    } = await supabaseClient
+      .from("community_posts")
+      .update({
+        display_order: targetOrder
+      })
+      .eq("id", currentPost.id);
+
+    if (currentUpdateError) {
+      throw currentUpdateError;
+    }
+
+    firstUpdateFinished = true;
+
+    const {
+      error: targetUpdateError
+    } = await supabaseClient
+      .from("community_posts")
+      .update({
+        display_order: currentOrder
+      })
+      .eq("id", targetPost.id);
+
+    if (targetUpdateError) {
+      throw targetUpdateError;
+    }
+
+    await loadAdminCommunityPosts();
+
+    adminCommunityListMessage.textContent =
+      "소식 순서를 변경했습니다.";
+
+  } catch (moveError) {
+    console.error(
+      "센터 소식 순서 변경 실패:",
+      moveError
+    );
+
+    /*
+      두 번째 소식 변경에 실패했다면
+      먼저 변경한 소식의 순서를 원래대로 복구
+    */
+    if (firstUpdateFinished) {
+      const {
+        error: rollbackError
+      } = await supabaseClient
+        .from("community_posts")
+        .update({
+          display_order: currentOrder
+        })
+        .eq("id", currentPost.id);
+
+      if (rollbackError) {
+        console.error(
+          "센터 소식 순서 복구 실패:",
+          rollbackError
+        );
+      }
+    }
+
+    adminCommunityListMessage.textContent =
+      `순서 변경 실패: ${
+        moveError.message ||
+        "알 수 없는 오류"
+      }`;
+
+  } finally {
+    isMovingAdminCommunityPost = false;
+
+    if (moveButton.isConnected) {
+      moveButton.disabled = false;
+    }
+  }
+}
+
 // 관리자 센터 소식 목록 표시
 function renderAdminCommunityPostList(
   posts
@@ -2380,7 +2505,7 @@ function renderAdminCommunityPostList(
   adminCommunityListMessage.textContent =
     "";
 
-  posts.forEach(function (post) {
+    posts.forEach(function (post, postIndex) {
     const manageCard =
       document.createElement("article");
 
@@ -2416,6 +2541,30 @@ function renderAdminCommunityPostList(
       thumbnail.loading = "lazy";
 
       manageMain.append(thumbnail);
+
+    } else if (post.video_url) {
+      const videoData =
+        getYouTubeVideoData(
+          post.video_url
+        );
+
+      if (videoData) {
+        const thumbnail =
+          document.createElement("img");
+
+        thumbnail.className =
+          "admin-community-manage-thumbnail";
+
+        thumbnail.src =
+          videoData.thumbnailUrl;
+
+        thumbnail.alt =
+          `${post.title} 영상 미리보기`;
+
+        thumbnail.loading = "lazy";
+
+        manageMain.append(thumbnail);
+      }
     }
 
     const manageInfo =
@@ -2454,22 +2603,22 @@ function renderAdminCommunityPostList(
         )
       );
 
-      const mediaLabels = [];
+    const mediaLabels = [];
 
-      if (postImages.length > 0) {
-        mediaLabels.push(
-          `사진 ${postImages.length}장`
-        );
-      }
-      
-      if (post.video_url) {
-        mediaLabels.push("영상 1개");
-      }
-      
-      manageMeta.textContent =
-        mediaLabels.length > 0
-          ? `${dateText} · ${mediaLabels.join(" · ")}`
-          : dateText;
+    if (postImages.length > 0) {
+      mediaLabels.push(
+        `사진 ${postImages.length}장`
+      );
+    }
+
+    if (post.video_url) {
+      mediaLabels.push("영상 1개");
+    }
+
+    manageMeta.textContent =
+      mediaLabels.length > 0
+        ? `${dateText} · ${mediaLabels.join(" · ")}`
+        : dateText;
 
     manageInfo.append(
       manageTitle,
@@ -2483,6 +2632,64 @@ function renderAdminCommunityPostList(
 
     actionArea.className =
       "admin-community-manage-actions";
+
+      const moveUpButton =
+      document.createElement("button");
+    
+    moveUpButton.type = "button";
+    moveUpButton.className =
+      "admin-community-order-button";
+    
+    moveUpButton.textContent =
+      "▲ 위로";
+    
+    moveUpButton.setAttribute(
+      "aria-label",
+      `${post.title} 소식을 위로 이동`
+    );
+    
+    moveUpButton.disabled =
+      postIndex === 0;
+    
+    moveUpButton.addEventListener(
+      "click",
+      function () {
+        moveAdminCommunityPost(
+          postIndex,
+          -1,
+          moveUpButton
+        );
+      }
+    );
+    
+    const moveDownButton =
+      document.createElement("button");
+    
+    moveDownButton.type = "button";
+    moveDownButton.className =
+      "admin-community-order-button";
+    
+    moveDownButton.textContent =
+      "▼ 아래로";
+    
+    moveDownButton.setAttribute(
+      "aria-label",
+      `${post.title} 소식을 아래로 이동`
+    );
+    
+    moveDownButton.disabled =
+      postIndex === posts.length - 1;
+    
+    moveDownButton.addEventListener(
+      "click",
+      function () {
+        moveAdminCommunityPost(
+          postIndex,
+          1,
+          moveDownButton
+        );
+      }
+    );
 
     const editButton =
       document.createElement("button");
@@ -2522,6 +2729,8 @@ function renderAdminCommunityPostList(
     );
 
     actionArea.append(
+      moveUpButton,
+      moveDownButton,
       editButton,
       deleteButton
     );
@@ -2556,6 +2765,7 @@ async function loadAdminCommunityPosts() {
         title,
         body,
         video_url,
+        display_order,
         published_at,
         created_at,
         community_post_images (
@@ -2566,6 +2776,10 @@ async function loadAdminCommunityPosts() {
         )
       `)
       .eq("is_published", true)
+      .order(
+        "display_order",
+        { ascending: true }
+      )
       .order(
         "published_at",
         { ascending: false }
@@ -3719,18 +3933,18 @@ async function saveAdminCommunityPost() {
       });
     }
 
-// 선택한 이미지가 있을 때만 이미지 정보를 저장
-if (imageRows.length > 0) {
-  const {
-    error: imageInsertError
-  } = await supabaseClient
-    .from("community_post_images")
-    .insert(imageRows);
+    // 선택한 이미지가 있을 때만 이미지 정보를 저장
+    if (imageRows.length > 0) {
+      const {
+        error: imageInsertError
+      } = await supabaseClient
+        .from("community_post_images")
+        .insert(imageRows);
 
-  if (imageInsertError) {
-    throw imageInsertError;
-  }
-}
+      if (imageInsertError) {
+        throw imageInsertError;
+      }
+    }
 
     /*
       본문과 이미지가 모두 저장된 후
@@ -3756,7 +3970,7 @@ if (imageRows.length > 0) {
     adminCommunityTitle.value = "";
     adminCommunityBody.value = "";
     adminCommunityVideoUrl.value = "";
-    
+
     renderAdminCommunityVideoPreview();
     resetAdminCommunityImages();
 

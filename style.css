@@ -2049,3 +2049,28 @@ body.camera-open {
     font-size: 13px;
   }
 }
+
+/* 관리자 센터 소식 순서 변경 버튼 */
+.admin-community-order-button {
+  width: 100%;
+  padding: 10px 12px;
+  color: #5f6b7c;
+  background-color: #f5f7fa;
+  border: 1px solid #cbd3df;
+  border-radius: 9px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.admin-community-order-button:active {
+  color: var(--brand-white);
+  background-color: var(--brand-orange);
+  border-color: var(--brand-orange);
+}
+
+.admin-community-order-button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
