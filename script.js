@@ -4167,7 +4167,7 @@ function showSignupForm() {
   loginMessage.textContent = "";
   signupMessage.textContent = "";
   signupForm.reset();
-  signupEmail.focus();
+  signupName.focus();
 }
 
 function showLoginForm() {
