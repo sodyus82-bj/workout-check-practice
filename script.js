@@ -2115,6 +2115,177 @@ adminCommunityImages.addEventListener(
   }
 );
 
+// 센터 소식 이미지 용량 최적화
+async function optimizeCommunityImage(
+  originalFile
+) {
+  const maximumLength = 1600;
+  const webpQuality = 0.85;
+
+  const sourceUrl =
+    URL.createObjectURL(originalFile);
+
+  try {
+    const sourceImage =
+      await new Promise(
+        function (resolve, reject) {
+          const image =
+            new Image();
+
+          image.onload = function () {
+            resolve(image);
+          };
+
+          image.onerror = function () {
+            reject(
+              new Error(
+                "이미지 파일을 읽을 수 없습니다."
+              )
+            );
+          };
+
+          image.src = sourceUrl;
+        }
+      );
+
+    const originalWidth =
+      sourceImage.naturalWidth;
+
+    const originalHeight =
+      sourceImage.naturalHeight;
+
+    if (
+      !originalWidth ||
+      !originalHeight
+    ) {
+      throw new Error(
+        "이미지 크기를 확인할 수 없습니다."
+      );
+    }
+
+    /*
+      가로와 세로 중 긴 쪽이
+      최대 1600px이 되도록 비율 유지
+    */
+    const resizeRatio = Math.min(
+      1,
+      maximumLength /
+        Math.max(
+          originalWidth,
+          originalHeight
+        )
+    );
+
+    const outputWidth = Math.max(
+      1,
+      Math.round(
+        originalWidth * resizeRatio
+      )
+    );
+
+    const outputHeight = Math.max(
+      1,
+      Math.round(
+        originalHeight * resizeRatio
+      )
+    );
+
+    const canvas =
+      document.createElement("canvas");
+
+    canvas.width = outputWidth;
+    canvas.height = outputHeight;
+
+    const canvasContext =
+      canvas.getContext("2d");
+
+    if (!canvasContext) {
+      throw new Error(
+        "이미지 최적화 기능을 사용할 수 없습니다."
+      );
+    }
+
+    canvasContext.imageSmoothingEnabled =
+      true;
+
+    canvasContext.imageSmoothingQuality =
+      "high";
+
+    canvasContext.drawImage(
+      sourceImage,
+      0,
+      0,
+      outputWidth,
+      outputHeight
+    );
+
+    const optimizedBlob =
+      await new Promise(
+        function (resolve) {
+          canvas.toBlob(
+            resolve,
+            "image/webp",
+            webpQuality
+          );
+        }
+      );
+
+    /*
+      WebP 변환을 지원하지 않는 환경에서는
+      원본 파일을 그대로 사용
+    */
+    if (!optimizedBlob) {
+      return originalFile;
+    }
+
+    /*
+      원본보다 결과 파일이 커졌다면
+      더 작은 원본을 그대로 사용
+    */
+    if (
+      optimizedBlob.size >=
+      originalFile.size
+    ) {
+      return originalFile;
+    }
+
+    const originalName =
+      originalFile.name.replace(
+        /\.[^/.]+$/,
+        ""
+      ) || "community-image";
+
+    const optimizedFile =
+      new File(
+        [optimizedBlob],
+        `${originalName}.webp`,
+        {
+          type: "image/webp",
+          lastModified: Date.now()
+        }
+      );
+
+    console.log(
+      "센터 소식 이미지 최적화:",
+      {
+        originalKB: Math.round(
+          originalFile.size / 1024
+        ),
+        optimizedKB: Math.round(
+          optimizedFile.size / 1024
+        ),
+        outputSize:
+          `${outputWidth}×${outputHeight}`
+      }
+    );
+
+    return optimizedFile;
+
+  } finally {
+    URL.revokeObjectURL(sourceUrl);
+  }
+}
+
 // 센터 소식 게시
 async function saveAdminCommunityPost() {
   const title =
@@ -2216,10 +2387,25 @@ async function saveAdminCommunityPost() {
         selectedAdminCommunityFiles.length;
       index += 1
     ) {
-      const file =
-        selectedAdminCommunityFiles[index];
-
-      const extensionByType = {
+      const originalFile =
+      selectedAdminCommunityFiles[index];
+    
+    adminCommunityMessage.textContent =
+      `이미지 ${index + 1}/${
+        selectedAdminCommunityFiles.length
+      } 최적화 중...`;
+    
+    const file =
+      await optimizeCommunityImage(
+        originalFile
+      );
+    
+    adminCommunityMessage.textContent =
+      `이미지 ${index + 1}/${
+        selectedAdminCommunityFiles.length
+      } 업로드 중...`;
+    
+    const extensionByType = {
         "image/jpeg": "jpg",
         "image/png": "png",
         "image/webp": "webp"
