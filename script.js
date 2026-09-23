@@ -101,98 +101,234 @@ const communityStatusMessage =
     "#communityStatusMessage"
   );
 
-  // 회원 1:1 문의 요소
+// 회원 1:1 문의 요소
 const memberInquiryAvailabilityMessage =
-document.querySelector(
-  "#memberInquiryAvailabilityMessage"
-);
+  document.querySelector(
+    "#memberInquiryAvailabilityMessage"
+  );
 
 const memberInquiryComposer =
-document.querySelector(
-  "#memberInquiryComposer"
-);
+  document.querySelector(
+    "#memberInquiryComposer"
+  );
 
 const memberInquiryTitle =
-document.querySelector(
-  "#memberInquiryTitle"
-);
+  document.querySelector(
+    "#memberInquiryTitle"
+  );
 
 const memberInquiryBody =
-document.querySelector(
-  "#memberInquiryBody"
-);
+  document.querySelector(
+    "#memberInquiryBody"
+  );
 
 const sendMemberInquiryButton =
-document.querySelector(
-  "#sendMemberInquiryButton"
-);
+  document.querySelector(
+    "#sendMemberInquiryButton"
+  );
 
 const memberInquirySubmitMessage =
-document.querySelector(
-  "#memberInquirySubmitMessage"
-);
+  document.querySelector(
+    "#memberInquirySubmitMessage"
+  );
 
 const memberInquiryListMessage =
-document.querySelector(
-  "#memberInquiryListMessage"
-);
+  document.querySelector(
+    "#memberInquiryListMessage"
+  );
 
 const memberInquiryList =
-document.querySelector(
-  "#memberInquiryList"
-);
+  document.querySelector(
+    "#memberInquiryList"
+  );
 
 let isMemberInquiryEnabled = false;
 let openMemberInquiryId = null;
 
+let inquiryRealtimeChannel = null;
+let inquiryRealtimeRefreshTimer = null;
+
+// 문의 변경이 연속으로 발생할 때 한 번만 목록 갱신
+function scheduleInquiryRealtimeRefresh(
+  screenType
+) {
+  if (inquiryRealtimeRefreshTimer) {
+    clearTimeout(
+      inquiryRealtimeRefreshTimer
+    );
+  }
+
+  inquiryRealtimeRefreshTimer =
+    setTimeout(
+      async function () {
+        inquiryRealtimeRefreshTimer = null;
+
+        try {
+          if (screenType === "admin") {
+            if (!adminScreen.hidden) {
+              await Promise.all([
+                loadAdminInquirySetting(),
+                loadAdminInquiries()
+              ]);
+            }
+
+            return;
+          }
+
+          if (!appScreen.hidden) {
+            await Promise.all([
+              loadMemberInquirySetting(),
+              loadMemberInquiries()
+            ]);
+          }
+        } catch (refreshError) {
+          console.error(
+            "문의 실시간 갱신 실패:",
+            refreshError
+          );
+        }
+      },
+      300
+    );
+}
+
+// 기존 문의 실시간 구독 종료
+async function stopInquiryRealtimeSubscription() {
+  if (inquiryRealtimeRefreshTimer) {
+    clearTimeout(
+      inquiryRealtimeRefreshTimer
+    );
+
+    inquiryRealtimeRefreshTimer = null;
+  }
+
+  const channelToRemove =
+    inquiryRealtimeChannel;
+
+  inquiryRealtimeChannel = null;
+
+  if (!channelToRemove) {
+    return;
+  }
+
+  try {
+    await supabaseClient.removeChannel(
+      channelToRemove
+    );
+  } catch (removeChannelError) {
+    console.error(
+      "문의 실시간 구독 종료 실패:",
+      removeChannelError
+    );
+  }
+}
+
+// 회원 또는 관리자 문의 실시간 구독 시작
+async function startInquiryRealtimeSubscription(
+  screenType
+) {
+  await stopInquiryRealtimeSubscription();
+
+  function refreshInquiryScreen() {
+    scheduleInquiryRealtimeRefresh(
+      screenType
+    );
+  }
+
+  inquiryRealtimeChannel =
+    supabaseClient
+      .channel(
+        `inquiry-realtime-${screenType}-${Date.now()}`
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "member_inquiries"
+        },
+        refreshInquiryScreen
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "inquiry_messages"
+        },
+        refreshInquiryScreen
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "app_settings",
+          filter:
+            "setting_key=eq.member_inquiry_enabled"
+        },
+        refreshInquiryScreen
+      )
+      .subscribe(function (status) {
+        if (
+          status === "CHANNEL_ERROR" ||
+          status === "TIMED_OUT"
+        ) {
+          console.error(
+            "문의 실시간 연결 실패:",
+            status
+          );
+        }
+      });
+}
 
 // 회원 문의 기능 온·오프 상태 불러오기
 async function loadMemberInquirySetting() {
-memberInquiryComposer.hidden = true;
-
-memberInquiryAvailabilityMessage.textContent =
-  "문의 기능을 확인하고 있습니다.";
-
-try {
-  const {
-    data: inquirySetting,
-    error: inquirySettingError
-  } = await supabaseClient
-    .from("app_settings")
-    .select("is_enabled")
-    .eq(
-      "setting_key",
-      "member_inquiry_enabled"
-    )
-    .maybeSingle();
-
-  if (inquirySettingError) {
-    throw inquirySettingError;
-  }
-
-  isMemberInquiryEnabled =
-    inquirySetting?.is_enabled === true;
-
-  memberInquiryComposer.hidden =
-    !isMemberInquiryEnabled;
-
-  memberInquiryAvailabilityMessage.textContent =
-    isMemberInquiryEnabled
-      ? "문의 내용을 남기면 센터 관리자가 확인 후 답변해 드립니다."
-      : "현재 1:1 문의 접수가 중단되어 있습니다. 기존 문의와 답변은 계속 확인할 수 있습니다.";
-
-} catch (settingError) {
-  console.error(
-    "회원 문의 설정 불러오기 실패:",
-    settingError
-  );
-
-  isMemberInquiryEnabled = false;
   memberInquiryComposer.hidden = true;
 
   memberInquiryAvailabilityMessage.textContent =
-    "문의 기능 상태를 확인하지 못했습니다.";
-}
+    "문의 기능을 확인하고 있습니다.";
+
+  try {
+    const {
+      data: inquirySetting,
+      error: inquirySettingError
+    } = await supabaseClient
+      .from("app_settings")
+      .select("is_enabled")
+      .eq(
+        "setting_key",
+        "member_inquiry_enabled"
+      )
+      .maybeSingle();
+
+    if (inquirySettingError) {
+      throw inquirySettingError;
+    }
+
+    isMemberInquiryEnabled =
+      inquirySetting?.is_enabled === true;
+
+    memberInquiryComposer.hidden =
+      !isMemberInquiryEnabled;
+
+    memberInquiryAvailabilityMessage.textContent =
+      isMemberInquiryEnabled
+        ? "문의 내용을 남기면 센터 관리자가 확인 후 답변해 드립니다."
+        : "현재 1:1 문의 접수가 중단되어 있습니다. 기존 문의와 답변은 계속 확인할 수 있습니다.";
+
+  } catch (settingError) {
+    console.error(
+      "회원 문의 설정 불러오기 실패:",
+      settingError
+    );
+
+    isMemberInquiryEnabled = false;
+    memberInquiryComposer.hidden = true;
+
+    memberInquiryAvailabilityMessage.textContent =
+      "문의 기능 상태를 확인하지 못했습니다.";
+  }
 }
 
 // 회원의 새 1:1 문의 전송
@@ -263,9 +399,8 @@ async function sendMemberInquiry() {
     );
 
     memberInquirySubmitMessage.textContent =
-      `문의 전송 실패: ${
-        sendError.message ||
-        "알 수 없는 오류"
+      `문의 전송 실패: ${sendError.message ||
+      "알 수 없는 오류"
       }`;
 
     /*
@@ -385,9 +520,8 @@ async function sendMemberInquiryReply(
     );
 
     replyMessage.textContent =
-      `추가 질문 전송 실패: ${
-        replyError.message ||
-        "알 수 없는 오류"
+      `추가 질문 전송 실패: ${replyError.message ||
+      "알 수 없는 오류"
       }`;
 
   } finally {
@@ -485,12 +619,12 @@ function renderMemberInquiries(inquiries) {
     threadArea.id =
       `memberInquiryThread-${inquiry.id}`;
 
-      const isThreadOpen =
+    const isThreadOpen =
       openMemberInquiryId === inquiry.id;
-    
+
     threadArea.hidden =
       !isThreadOpen;
-    
+
     summaryButton.setAttribute(
       "aria-expanded",
       String(isThreadOpen)
@@ -653,22 +787,22 @@ function renderMemberInquiries(inquiries) {
       "click",
       function () {
         const willOpen =
-        threadArea.hidden;
-      
-      threadArea.hidden =
-        !willOpen;
-      
-      openMemberInquiryId =
-        willOpen
-          ? inquiry.id
-          : null;
-      
-      summaryButton.setAttribute(
-        "aria-expanded",
-        String(willOpen)
-      );
-    }
-  );
+          threadArea.hidden;
+
+        threadArea.hidden =
+          !willOpen;
+
+        openMemberInquiryId =
+          willOpen
+            ? inquiry.id
+            : null;
+
+        summaryButton.setAttribute(
+          "aria-expanded",
+          String(willOpen)
+        );
+      }
+    );
 
     inquiryCard.append(
       summaryButton,
@@ -742,9 +876,8 @@ async function loadMemberInquiries() {
     );
 
     memberInquiryListMessage.textContent =
-      `문의 내역을 불러오지 못했습니다: ${
-        loadError.message ||
-        "알 수 없는 오류"
+      `문의 내역을 불러오지 못했습니다: ${loadError.message ||
+      "알 수 없는 오류"
       }`;
   }
 }
@@ -3096,9 +3229,8 @@ async function loadAdminInquirySetting() {
       "확인 실패";
 
     adminInquirySettingMessage.textContent =
-      `문의 설정을 불러오지 못했습니다: ${
-        settingError.message ||
-        "알 수 없는 오류"
+      `문의 설정을 불러오지 못했습니다: ${settingError.message ||
+      "알 수 없는 오류"
       }`;
   }
 }
@@ -3174,9 +3306,8 @@ async function toggleAdminInquiryFeature() {
     );
 
     adminInquirySettingMessage.textContent =
-      `설정 변경 실패: ${
-        toggleError.message ||
-        "알 수 없는 오류"
+      `설정 변경 실패: ${toggleError.message ||
+      "알 수 없는 오류"
       }`;
 
     toggleAdminInquiryFeatureButton.disabled =
@@ -3250,8 +3381,7 @@ async function sendAdminInquiryReply(
     );
 
     replyMessage.textContent =
-      `답변 저장 실패: ${
-        replyError.message || "알 수 없는 오류"
+      `답변 저장 실패: ${replyError.message || "알 수 없는 오류"
       }`;
   } finally {
     replyButton.disabled = false;
@@ -3678,9 +3808,8 @@ async function loadAdminInquiries() {
     );
 
     adminInquiryListMessage.textContent =
-      `회원 문의를 불러오지 못했습니다: ${
-        loadError.message ||
-        "알 수 없는 오류"
+      `회원 문의를 불러오지 못했습니다: ${loadError.message ||
+      "알 수 없는 오류"
       }`;
   }
 }
@@ -3715,7 +3844,7 @@ async function moveAdminCommunityPost(
   if (
     targetIndex < 0 ||
     targetIndex >=
-      loadedAdminCommunityPosts.length
+    loadedAdminCommunityPosts.length
   ) {
     return;
   }
@@ -3803,9 +3932,8 @@ async function moveAdminCommunityPost(
     }
 
     adminCommunityListMessage.textContent =
-      `순서 변경 실패: ${
-        moveError.message ||
-        "알 수 없는 오류"
+      `순서 변경 실패: ${moveError.message ||
+      "알 수 없는 오류"
       }`;
 
   } finally {
@@ -3833,7 +3961,7 @@ function renderAdminCommunityPostList(
   adminCommunityListMessage.textContent =
     "";
 
-    posts.forEach(function (post, postIndex) {
+  posts.forEach(function (post, postIndex) {
     const manageCard =
       document.createElement("article");
 
@@ -3961,24 +4089,24 @@ function renderAdminCommunityPostList(
     actionArea.className =
       "admin-community-manage-actions";
 
-      const moveUpButton =
+    const moveUpButton =
       document.createElement("button");
-    
+
     moveUpButton.type = "button";
     moveUpButton.className =
       "admin-community-order-button";
-    
+
     moveUpButton.textContent =
       "▲ 위로";
-    
+
     moveUpButton.setAttribute(
       "aria-label",
       `${post.title} 소식을 위로 이동`
     );
-    
+
     moveUpButton.disabled =
       postIndex === 0;
-    
+
     moveUpButton.addEventListener(
       "click",
       function () {
@@ -3989,25 +4117,25 @@ function renderAdminCommunityPostList(
         );
       }
     );
-    
+
     const moveDownButton =
       document.createElement("button");
-    
+
     moveDownButton.type = "button";
     moveDownButton.className =
       "admin-community-order-button";
-    
+
     moveDownButton.textContent =
       "▼ 아래로";
-    
+
     moveDownButton.setAttribute(
       "aria-label",
       `${post.title} 소식을 아래로 이동`
     );
-    
+
     moveDownButton.disabled =
       postIndex === posts.length - 1;
-    
+
     moveDownButton.addEventListener(
       "click",
       function () {
@@ -5502,6 +5630,9 @@ async function showWorkoutApp(userId) {
     loadMemberInquirySetting(),
     loadMemberInquiries()
   ]);
+
+  await startInquiryRealtimeSubscription("member");
+
 }
 
 // 관리자용 회원 목록 불러오기
@@ -5647,6 +5778,7 @@ adminMemberSearch.addEventListener("input", function () {
     new Event("change")
   );
 });
+
 // 관리자 화면 표시
 async function showAdminApp() {
   loginScreen.hidden = true;
@@ -5663,6 +5795,8 @@ async function showAdminApp() {
     loadAdminInquirySetting(),
     loadAdminInquiries()
   ]);
+
+  await startInquiryRealtimeSubscription("admin");
 }
 
 // 현재 로그인한 계정의 역할에 따라 화면 선택
@@ -6349,6 +6483,8 @@ async function handleLogout() {
       alert("로그아웃하지 못했습니다. 다시 시도해 주세요.");
       return;
     }
+
+    await stopInquiryRealtimeSubscription();
 
     // 회원·관리자 화면을 숨기고 로그인 화면 표시
     appScreen.hidden = true;
