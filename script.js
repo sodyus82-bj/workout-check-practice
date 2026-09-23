@@ -481,9 +481,9 @@ function renderCommunityPosts(posts) {
     postCard.className =
       "community-post-card";
 
-      const postImages =
+    const postImages =
       post.community_post_images || [];
-    
+
     const imageCarousel =
       createCommunityImageCarousel(
         postImages,
@@ -664,9 +664,8 @@ async function loadCommunityPosts() {
     );
 
     communityStatusMessage.textContent =
-      `센터 소식을 불러오지 못했습니다: ${
-        loadError.message ||
-        "알 수 없는 오류"
+      `센터 소식을 불러오지 못했습니다: ${loadError.message ||
+      "알 수 없는 오류"
       }`;
 
     communityPostList.replaceChildren(
@@ -738,11 +737,11 @@ function renderWorkoutRecords() {
 
   const recordsToShow = selectedWorkoutDate
     ? workoutRecords.filter((record) => {
-        return (
-          getWorkoutRecordDateKey(record.taken_at) ===
-          selectedWorkoutDate
-        );
-      })
+      return (
+        getWorkoutRecordDateKey(record.taken_at) ===
+        selectedWorkoutDate
+      );
+    })
     : workoutRecords;
 
   if (recordsToShow.length === 0) {
@@ -802,152 +801,152 @@ function renderWorkoutRecords() {
         minute: "2-digit"
       }).format(new Date(record.taken_at));
 
-      const captionEditor =
-  document.createElement("textarea");
+    const captionEditor =
+      document.createElement("textarea");
 
-captionEditor.className =
-  "workout-record-caption-editor";
-captionEditor.value = record.caption || "";
-captionEditor.maxLength = 120;
-captionEditor.rows = 3;
-captionEditor.hidden = true;
-captionEditor.setAttribute(
-  "aria-label",
-  "운동 기록 메모 수정"
-);
-
-const editActions =
-  document.createElement("div");
-
-editActions.className =
-  "workout-record-edit-actions";
-editActions.hidden = true;
-
-const cancelEditButton =
-  document.createElement("button");
-
-cancelEditButton.type = "button";
-cancelEditButton.className =
-  "cancel-workout-caption-button";
-cancelEditButton.textContent = "취소";
-
-const saveEditButton =
-  document.createElement("button");
-
-saveEditButton.type = "button";
-saveEditButton.className =
-  "save-workout-caption-button";
-saveEditButton.textContent = "저장";
-
-editActions.append(
-  cancelEditButton,
-  saveEditButton
-);
-
-const recordFooter =
-  document.createElement("div");
-
-recordFooter.className =
-  "workout-record-footer";
-
-const recordButtons =
-  document.createElement("div");
-
-recordButtons.className =
-  "workout-record-buttons";
-
-const editButton =
-  document.createElement("button");
-
-editButton.type = "button";
-editButton.className =
-  "edit-workout-record-button";
-editButton.textContent = "수정";
-
-const deleteButton =
-  document.createElement("button");
-
-deleteButton.type = "button";
-deleteButton.className =
-  "delete-workout-record-button";
-deleteButton.textContent = "삭제하기";
-
-deleteButton.setAttribute(
-  "aria-label",
-  "이 운동 기록 삭제하기"
-);
-
-editButton.addEventListener(
-  "click",
-  function () {
-    captionEditor.value =
-      record.caption || "";
-
-    recordCaption.hidden = true;
-    recordFooter.hidden = true;
-    captionEditor.hidden = false;
-    editActions.hidden = false;
-
-    captionEditor.focus();
-    captionEditor.setSelectionRange(
-      captionEditor.value.length,
-      captionEditor.value.length
-    );
-  }
-);
-
-cancelEditButton.addEventListener(
-  "click",
-  function () {
-    captionEditor.value =
-      record.caption || "";
-
+    captionEditor.className =
+      "workout-record-caption-editor";
+    captionEditor.value = record.caption || "";
+    captionEditor.maxLength = 120;
+    captionEditor.rows = 3;
     captionEditor.hidden = true;
-    editActions.hidden = true;
-    recordCaption.hidden = false;
-    recordFooter.hidden = false;
-  }
-);
+    captionEditor.setAttribute(
+      "aria-label",
+      "운동 기록 메모 수정"
+    );
 
-saveEditButton.addEventListener(
-  "click",
-  async function () {
-    await updateWorkoutRecordCaption(
-      record,
-      captionEditor.value,
+    const editActions =
+      document.createElement("div");
+
+    editActions.className =
+      "workout-record-edit-actions";
+    editActions.hidden = true;
+
+    const cancelEditButton =
+      document.createElement("button");
+
+    cancelEditButton.type = "button";
+    cancelEditButton.className =
+      "cancel-workout-caption-button";
+    cancelEditButton.textContent = "취소";
+
+    const saveEditButton =
+      document.createElement("button");
+
+    saveEditButton.type = "button";
+    saveEditButton.className =
+      "save-workout-caption-button";
+    saveEditButton.textContent = "저장";
+
+    editActions.append(
+      cancelEditButton,
       saveEditButton
     );
-  }
-);
 
-deleteButton.addEventListener(
-  "click",
-  function () {
-    deleteWorkoutRecord(
-      record,
+    const recordFooter =
+      document.createElement("div");
+
+    recordFooter.className =
+      "workout-record-footer";
+
+    const recordButtons =
+      document.createElement("div");
+
+    recordButtons.className =
+      "workout-record-buttons";
+
+    const editButton =
+      document.createElement("button");
+
+    editButton.type = "button";
+    editButton.className =
+      "edit-workout-record-button";
+    editButton.textContent = "수정";
+
+    const deleteButton =
+      document.createElement("button");
+
+    deleteButton.type = "button";
+    deleteButton.className =
+      "delete-workout-record-button";
+    deleteButton.textContent = "삭제하기";
+
+    deleteButton.setAttribute(
+      "aria-label",
+      "이 운동 기록 삭제하기"
+    );
+
+    editButton.addEventListener(
+      "click",
+      function () {
+        captionEditor.value =
+          record.caption || "";
+
+        recordCaption.hidden = true;
+        recordFooter.hidden = true;
+        captionEditor.hidden = false;
+        editActions.hidden = false;
+
+        captionEditor.focus();
+        captionEditor.setSelectionRange(
+          captionEditor.value.length,
+          captionEditor.value.length
+        );
+      }
+    );
+
+    cancelEditButton.addEventListener(
+      "click",
+      function () {
+        captionEditor.value =
+          record.caption || "";
+
+        captionEditor.hidden = true;
+        editActions.hidden = true;
+        recordCaption.hidden = false;
+        recordFooter.hidden = false;
+      }
+    );
+
+    saveEditButton.addEventListener(
+      "click",
+      async function () {
+        await updateWorkoutRecordCaption(
+          record,
+          captionEditor.value,
+          saveEditButton
+        );
+      }
+    );
+
+    deleteButton.addEventListener(
+      "click",
+      function () {
+        deleteWorkoutRecord(
+          record,
+          deleteButton
+        );
+      }
+    );
+
+    recordButtons.append(
+      editButton,
       deleteButton
     );
-  }
-);
 
-recordButtons.append(
-  editButton,
-  deleteButton
-);
+    recordFooter.append(
+      recordDate,
+      recordButtons
+    );
 
-recordFooter.append(
-  recordDate,
-  recordButtons
-);
+    recordCard.append(
+      recordImage,
+      recordCaption,
+      captionEditor,
+      editActions,
+      recordFooter
+    );
 
-recordCard.append(
-  recordImage,
-  recordCaption,
-  captionEditor,
-  editActions,
-  recordFooter
-);
-    
     workoutRecordList.append(recordCard);
   });
 }
@@ -1127,9 +1126,8 @@ async function deleteWorkoutRecord(
     );
 
     alert(
-      `운동 기록을 삭제하지 못했습니다.\n${
-        deleteError.message ||
-        "알 수 없는 오류"
+      `운동 기록을 삭제하지 못했습니다.\n${deleteError.message ||
+      "알 수 없는 오류"
       }`
     );
 
@@ -1193,9 +1191,8 @@ async function updateWorkoutRecordCaption(
     );
 
     alert(
-      `운동 기록을 수정하지 못했습니다.\n${
-        updateError.message ||
-        "알 수 없는 오류"
+      `운동 기록을 수정하지 못했습니다.\n${updateError.message ||
+      "알 수 없는 오류"
       }`
     );
 
@@ -1696,8 +1693,8 @@ async function saveWorkoutRecord() {
       typeof crypto.randomUUID === "function"
         ? crypto.randomUUID()
         : `${Date.now()}-${Math.random()
-            .toString(16)
-            .slice(2)}`;
+          .toString(16)
+          .slice(2)}`;
 
     uploadedPhotoPath =
       `${user.id}/${Date.now()}-${uniqueId}.${photoExtension}`;
@@ -1748,22 +1745,22 @@ async function saveWorkoutRecord() {
     }
 
     // 저장한 날짜의 달력과 기록 목록 새로고침
-visibleWorkoutMonth =
-new Date(workoutPhotoTakenAt);
+    visibleWorkoutMonth =
+      new Date(workoutPhotoTakenAt);
 
-visibleWorkoutMonth.setDate(1);
-selectedWorkoutDate = "";
+    visibleWorkoutMonth.setDate(1);
+    selectedWorkoutDate = "";
 
-await loadWorkoutRecords(user.id);
+    await loadWorkoutRecords(user.id);
     workoutRecordSaveMessage.textContent =
       "운동 기록을 저장했습니다.";
 
     saveWorkoutRecordButton.textContent =
       "저장 완료";
 
-      setTimeout(function () {
-        closeWorkoutCamera();
-      }, 800);
+    setTimeout(function () {
+      closeWorkoutCamera();
+    }, 800);
 
   } catch (saveError) {
     console.error(
@@ -1772,7 +1769,7 @@ await loadWorkoutRecords(user.id);
     );
 
     workoutRecordSaveMessage.textContent =
-    `저장 실패: ${saveError.message || "알 수 없는 오류"}`;
+      `저장 실패: ${saveError.message || "알 수 없는 오류"}`;
 
     saveWorkoutRecordButton.disabled = false;
     saveWorkoutRecordButton.textContent =
@@ -1921,7 +1918,7 @@ const saveAdminCommunityButton =
     "#saveAdminCommunityButton"
   );
 
-  const cancelAdminCommunityEditButton =
+const cancelAdminCommunityEditButton =
   document.querySelector(
     "#cancelAdminCommunityEditButton"
   );
@@ -1931,16 +1928,16 @@ const adminCommunityMessage =
     "#adminCommunityMessage"
   );
 
-  // 게시한 센터 소식 관리 요소
+// 게시한 센터 소식 관리 요소
 const adminCommunityPostList =
-document.querySelector(
-  "#adminCommunityPostList"
-);
+  document.querySelector(
+    "#adminCommunityPostList"
+  );
 
 const adminCommunityListMessage =
-document.querySelector(
-  "#adminCommunityListMessage"
-);
+  document.querySelector(
+    "#adminCommunityListMessage"
+  );
 
 // 선택된 센터 소식 이미지 파일
 let selectedAdminCommunityFiles = [];
@@ -2215,9 +2212,8 @@ async function loadAdminCommunityPosts() {
     loadedAdminCommunityPosts = [];
 
     adminCommunityListMessage.textContent =
-      `센터 소식을 불러오지 못했습니다: ${
-        loadError.message ||
-        "알 수 없는 오류"
+      `센터 소식을 불러오지 못했습니다: ${loadError.message ||
+      "알 수 없는 오류"
       }`;
   }
 }
@@ -2334,9 +2330,8 @@ async function deleteAdminCommunityPost(
     );
 
     adminCommunityListMessage.textContent =
-      `삭제 실패: ${
-        deleteError.message ||
-        "알 수 없는 오류"
+      `삭제 실패: ${deleteError.message ||
+      "알 수 없는 오류"
       }`;
 
     deleteButton.disabled = false;
@@ -2576,11 +2571,11 @@ adminCommunityImages.addEventListener(
             function (selectedFile) {
               return (
                 selectedFile.name ===
-                  newFile.name &&
+                newFile.name &&
                 selectedFile.size ===
-                  newFile.size &&
+                newFile.size &&
                 selectedFile.lastModified ===
-                  newFile.lastModified
+                newFile.lastModified
               );
             }
           );
@@ -2591,7 +2586,7 @@ adminCommunityImages.addEventListener(
       existingAdminCommunityImages.length +
       selectedAdminCommunityFiles.length +
       filesToAdd.length >
-    5
+      5
     ) {
       adminCommunityMessage.textContent =
         "이미지는 최대 5장까지 선택할 수 있습니다.";
@@ -2673,10 +2668,10 @@ async function optimizeCommunityImage(
     const resizeRatio = Math.min(
       1,
       maximumLength /
-        Math.max(
-          originalWidth,
-          originalHeight
-        )
+      Math.max(
+        originalWidth,
+        originalHeight
+      )
     );
 
     const outputWidth = Math.max(
@@ -2833,15 +2828,14 @@ async function updateAdminCommunityPost(
     for (
       let index = 0;
       index <
-        selectedAdminCommunityFiles.length;
+      selectedAdminCommunityFiles.length;
       index += 1
     ) {
       const originalFile =
         selectedAdminCommunityFiles[index];
 
       adminCommunityMessage.textContent =
-        `새 이미지 ${index + 1}/${
-          selectedAdminCommunityFiles.length
+        `새 이미지 ${index + 1}/${selectedAdminCommunityFiles.length
         } 최적화 중...`;
 
       const file =
@@ -2850,8 +2844,7 @@ async function updateAdminCommunityPost(
         );
 
       adminCommunityMessage.textContent =
-        `새 이미지 ${index + 1}/${
-          selectedAdminCommunityFiles.length
+        `새 이미지 ${index + 1}/${selectedAdminCommunityFiles.length
         } 업로드 중...`;
 
       const extensionByType = {
@@ -2898,10 +2891,9 @@ async function updateAdminCommunityPost(
         post_id: postId,
         storage_path: storagePath,
         alt_text:
-          `${title} 이미지 ${
-            existingAdminCommunityImages.length +
-            index +
-            1
+          `${title} 이미지 ${existingAdminCommunityImages.length +
+          index +
+          1
           }`,
         sort_order:
           existingAdminCommunityImages.length +
@@ -2909,16 +2901,21 @@ async function updateAdminCommunityPost(
       });
     }
 
-    // 새 사진 정보를 데이터베이스에 저장
-    if (newImageRows.length > 0) {
+    /*
+      사진 순번이 겹치지 않도록
+      삭제할 기존 사진 정보를 먼저 제거
+    */
+    if (removedImageIds.length > 0) {
       const {
-        error: imageInsertError
+        error: imageDeleteError
       } = await supabaseClient
         .from("community_post_images")
-        .insert(newImageRows);
+        .delete()
+        .eq("post_id", postId)
+        .in("id", removedImageIds);
 
-      if (imageInsertError) {
-        throw imageInsertError;
+      if (imageDeleteError) {
+        throw imageDeleteError;
       }
     }
 
@@ -2926,7 +2923,7 @@ async function updateAdminCommunityPost(
     for (
       let index = 0;
       index <
-        existingAdminCommunityImages.length;
+      existingAdminCommunityImages.length;
       index += 1
     ) {
       const image =
@@ -2946,6 +2943,22 @@ async function updateAdminCommunityPost(
 
       if (imageUpdateError) {
         throw imageUpdateError;
+      }
+    }
+
+    /*
+      기존 사진 순서를 정리한 다음
+      새 사진 정보를 데이터베이스에 저장
+    */
+    if (newImageRows.length > 0) {
+      const {
+        error: imageInsertError
+      } = await supabaseClient
+        .from("community_post_images")
+        .insert(newImageRows);
+
+      if (imageInsertError) {
+        throw imageInsertError;
       }
     }
 
@@ -2975,21 +2988,6 @@ async function updateAdminCommunityPost(
       throw new Error(
         "수정할 센터 소식을 찾을 수 없습니다."
       );
-    }
-
-    // 삭제 표시한 기존 사진 정보 제거
-    if (removedImageIds.length > 0) {
-      const {
-        error: imageDeleteError
-      } = await supabaseClient
-        .from("community_post_images")
-        .delete()
-        .eq("post_id", postId)
-        .in("id", removedImageIds);
-
-      if (imageDeleteError) {
-        throw imageDeleteError;
-      }
     }
 
     let storageCleanupError = null;
@@ -3068,9 +3066,8 @@ async function updateAdminCommunityPost(
     }
 
     adminCommunityMessage.textContent =
-      `수정 실패: ${
-        updateError.message ||
-        "알 수 없는 오류"
+      `수정 실패: ${updateError.message ||
+      "알 수 없는 오류"
       }`;
 
   } finally {
@@ -3109,35 +3106,35 @@ async function saveAdminCommunityPost() {
   }
 
   const totalImageCount =
-  existingAdminCommunityImages.length +
-  selectedAdminCommunityFiles.length;
+    existingAdminCommunityImages.length +
+    selectedAdminCommunityFiles.length;
 
-if (totalImageCount === 0) {
-  adminCommunityMessage.textContent =
-    "소식 이미지를 1장 이상 선택해 주세요.";
+  if (totalImageCount === 0) {
+    adminCommunityMessage.textContent =
+      "소식 이미지를 1장 이상 선택해 주세요.";
 
-  return;
-}
+    return;
+  }
 
-if (totalImageCount > 5) {
-  adminCommunityMessage.textContent =
-    "이미지는 최대 5장까지 선택할 수 있습니다.";
+  if (totalImageCount > 5) {
+    adminCommunityMessage.textContent =
+      "이미지는 최대 5장까지 선택할 수 있습니다.";
 
-  return;
-}
+    return;
+  }
 
-/*
-  수정 중이라면 새 게시물을 만들지 않고
-  기존 게시물 수정 함수 실행
-*/
-if (editingAdminCommunityPostId) {
-  await updateAdminCommunityPost(
-    title,
-    body
-  );
+  /*
+    수정 중이라면 새 게시물을 만들지 않고
+    기존 게시물 수정 함수 실행
+  */
+  if (editingAdminCommunityPostId) {
+    await updateAdminCommunityPost(
+      title,
+      body
+    );
 
-  return;
-}
+    return;
+  }
 
   saveAdminCommunityButton.disabled = true;
   saveAdminCommunityButton.textContent =
@@ -3195,28 +3192,26 @@ if (editingAdminCommunityPostId) {
     for (
       let index = 0;
       index <
-        selectedAdminCommunityFiles.length;
+      selectedAdminCommunityFiles.length;
       index += 1
     ) {
       const originalFile =
-      selectedAdminCommunityFiles[index];
-    
-    adminCommunityMessage.textContent =
-      `이미지 ${index + 1}/${
-        selectedAdminCommunityFiles.length
-      } 최적화 중...`;
-    
-    const file =
-      await optimizeCommunityImage(
-        originalFile
-      );
-    
-    adminCommunityMessage.textContent =
-      `이미지 ${index + 1}/${
-        selectedAdminCommunityFiles.length
-      } 업로드 중...`;
-    
-    const extensionByType = {
+        selectedAdminCommunityFiles[index];
+
+      adminCommunityMessage.textContent =
+        `이미지 ${index + 1}/${selectedAdminCommunityFiles.length
+        } 최적화 중...`;
+
+      const file =
+        await optimizeCommunityImage(
+          originalFile
+        );
+
+      adminCommunityMessage.textContent =
+        `이미지 ${index + 1}/${selectedAdminCommunityFiles.length
+        } 업로드 중...`;
+
+      const extensionByType = {
         "image/jpeg": "jpg",
         "image/png": "png",
         "image/webp": "webp"
@@ -3349,9 +3344,8 @@ if (editingAdminCommunityPostId) {
     }
 
     adminCommunityMessage.textContent =
-      `게시 실패: ${
-        saveError.message ||
-        "알 수 없는 오류"
+      `게시 실패: ${saveError.message ||
+      "알 수 없는 오류"
       }`;
 
   } finally {
@@ -3420,10 +3414,10 @@ function renderRoutineDescription(description) {
 // 회원에게 배정된 최신 루틴 불러오기
 async function loadMemberRoutine(userId) {
   const routineElement =
-  routineImage.closest(".routine-image");
+    routineImage.closest(".routine-image");
 
-routineElement.hidden = true;
-routineDescription.hidden = true;
+  routineElement.hidden = true;
+  routineDescription.hidden = true;
 
   const { data, error } = await supabaseClient
     .from("member_routines")
