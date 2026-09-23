@@ -103,6 +103,14 @@ const communityStatusMessage =
 
 // 선택한 회원 탭 표시
 function showMemberTab(tabName) {
+    // 센터 커뮤니티를 벗어나면 재생 중인 영상 정지
+    if (
+      tabName !== "community" &&
+      activeCommunityVideoArea
+    ) {
+      activeCommunityVideoArea
+        .resetCommunityVideo();
+    }
   const selectedPanel = memberTabPanels[tabName];
 
   if (!selectedPanel) {
@@ -696,12 +704,20 @@ function renderCommunityPosts(posts) {
     postCard.className =
       "community-post-card";
 
-    const postImages =
+      const postImages =
       post.community_post_images || [];
-
+    
     const imageCarousel =
-      createCommunityImageCarousel(
-        postImages,
+      postImages.length > 0
+        ? createCommunityImageCarousel(
+            postImages,
+            post.title
+          )
+        : null;
+    
+    const videoArea =
+      createCommunityVideoFacade(
+        post.video_url,
         post.title
       );
 
@@ -759,10 +775,15 @@ function renderCommunityPosts(posts) {
 
     postContent.append(postDate);
 
-    postCard.append(
-      imageCarousel,
-      postContent
-    );
+    if (imageCarousel) {
+      postCard.append(imageCarousel);
+    }
+    
+    if (videoArea) {
+      postCard.append(videoArea);
+    }
+    
+    postCard.append(postContent);
 
     if (postIndex > 0) {
       const postSeparator =
@@ -805,6 +826,7 @@ async function loadCommunityPosts() {
         id,
         title,
         body,
+        video_url,
         published_at,
         community_post_images (
           id,
@@ -2432,8 +2454,22 @@ function renderAdminCommunityPostList(
         )
       );
 
-    manageMeta.textContent =
-      `${dateText} · 사진 ${postImages.length}장`;
+      const mediaLabels = [];
+
+      if (postImages.length > 0) {
+        mediaLabels.push(
+          `사진 ${postImages.length}장`
+        );
+      }
+      
+      if (post.video_url) {
+        mediaLabels.push("영상 1개");
+      }
+      
+      manageMeta.textContent =
+        mediaLabels.length > 0
+          ? `${dateText} · ${mediaLabels.join(" · ")}`
+          : dateText;
 
     manageInfo.append(
       manageTitle,
@@ -2519,6 +2555,7 @@ async function loadAdminCommunityPosts() {
         id,
         title,
         body,
+        video_url,
         published_at,
         created_at,
         community_post_images (
@@ -3186,7 +3223,8 @@ async function optimizeCommunityImage(
 // 기존 센터 소식 수정 저장
 async function updateAdminCommunityPost(
   title,
-  body
+  body,
+  videoUrl
 ) {
   const postId =
     editingAdminCommunityPostId;
@@ -3370,6 +3408,7 @@ async function updateAdminCommunityPost(
       .update({
         title: title,
         body: body,
+        video_url: videoUrl || null,
         updated_at:
           new Date().toISOString()
       })
@@ -3488,6 +3527,14 @@ async function saveAdminCommunityPost() {
   const body =
     adminCommunityBody.value.trim();
 
+  const videoUrl =
+    adminCommunityVideoUrl.value.trim();
+
+  const videoData =
+    videoUrl
+      ? getYouTubeVideoData(videoUrl)
+      : null;
+
   if (!title) {
     adminCommunityMessage.textContent =
       "소식 제목을 입력해 주세요.";
@@ -3504,13 +3551,24 @@ async function saveAdminCommunityPost() {
     return;
   }
 
+  if (videoUrl && !videoData) {
+    adminCommunityMessage.textContent =
+      "올바른 유튜브 영상 또는 쇼츠 주소를 입력해 주세요.";
+
+    adminCommunityVideoUrl.focus();
+    return;
+  }
+
   const totalImageCount =
     existingAdminCommunityImages.length +
     selectedAdminCommunityFiles.length;
 
-  if (totalImageCount === 0) {
+  if (
+    totalImageCount === 0 &&
+    !videoData
+  ) {
     adminCommunityMessage.textContent =
-      "소식 이미지를 1장 이상 선택해 주세요.";
+      "소식 이미지나 영상을 1개 이상 등록해 주세요.";
 
     return;
   }
@@ -3529,7 +3587,8 @@ async function saveAdminCommunityPost() {
   if (editingAdminCommunityPostId) {
     await updateAdminCommunityPost(
       title,
-      body
+      body,
+      videoUrl
     );
 
     return;
@@ -3570,6 +3629,7 @@ async function saveAdminCommunityPost() {
       .insert({
         title: title,
         body: body,
+        video_url: videoUrl || null,
         is_published: false,
         created_by: user.id
       })
@@ -3659,16 +3719,18 @@ async function saveAdminCommunityPost() {
       });
     }
 
-    // 업로드된 이미지 정보를 DB에 저장
-    const {
-      error: imageInsertError
-    } = await supabaseClient
-      .from("community_post_images")
-      .insert(imageRows);
+// 선택한 이미지가 있을 때만 이미지 정보를 저장
+if (imageRows.length > 0) {
+  const {
+    error: imageInsertError
+  } = await supabaseClient
+    .from("community_post_images")
+    .insert(imageRows);
 
-    if (imageInsertError) {
-      throw imageInsertError;
-    }
+  if (imageInsertError) {
+    throw imageInsertError;
+  }
+}
 
     /*
       본문과 이미지가 모두 저장된 후
@@ -3693,7 +3755,9 @@ async function saveAdminCommunityPost() {
 
     adminCommunityTitle.value = "";
     adminCommunityBody.value = "";
-
+    adminCommunityVideoUrl.value = "";
+    
+    renderAdminCommunityVideoPreview();
     resetAdminCommunityImages();
 
     await loadAdminCommunityPosts();
