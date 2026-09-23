@@ -7,7 +7,7 @@
 
   <title>오늘의 운동 체크</title>
 
-  <link rel="stylesheet" href="style.css?v=16">
+  <link rel="stylesheet" href="style.css?v=17">
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#ec6a1a">
 
@@ -91,7 +91,16 @@
     </div>
   </section>
   <main id="appScreen" class="app" hidden>
-    <img class="screen-logo screen-logo-top" src="images/center-logo.png" alt="헬스와 필라테스 화곡점">
+    <div class="member-app-topbar">
+      <span class="member-app-topbar-spacer" aria-hidden="true"></span>
+
+      <img class="screen-logo screen-logo-top" src="images/center-logo.png" alt="헬스와 필라테스 화곡점">
+
+      <button id="refreshMemberAppButton" class="member-refresh-button" type="button" aria-label="앱 새로고침">
+        <span aria-hidden="true">↻</span>
+        <span>새로고침</span>
+      </button>
+    </div>
     <section id="routineTabPanel" class="member-tab-panel" role="tabpanel" aria-labelledby="routineTabButton">
       <header class="header">
         <p class="label">오늘의 운동</p>
@@ -384,7 +393,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-  <script src="script.js?v=16"></script>
+  <script src="script.js?v=17"></script>
 </body>
 
 

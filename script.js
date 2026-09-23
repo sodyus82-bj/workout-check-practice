@@ -1860,7 +1860,21 @@ const toggleRoutineDescriptionButton = document.querySelector(
   "#toggleRoutineDescriptionButton"
 );
 const logoutButton = document.querySelector("#logoutButton");
+const refreshMemberAppButton =
+  document.querySelector("#refreshMemberAppButton");
 
+refreshMemberAppButton.addEventListener(
+  "click",
+  function () {
+    refreshMemberAppButton.disabled = true;
+    refreshMemberAppButton.lastElementChild.textContent =
+      "갱신 중...";
+
+    setTimeout(function () {
+      window.location.reload();
+    }, 150);
+  }
+);
 const adminMemberSearch = document.querySelector("#adminMemberSearch");
 const adminMemberSelect = document.querySelector("#adminMemberSelect");
 const adminMemberInfo = document.querySelector("#adminMemberInfo");
