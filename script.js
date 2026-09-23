@@ -1866,6 +1866,18 @@ const refreshMemberAppButton =
 refreshMemberAppButton.addEventListener(
   "click",
   function () {
+    const activeMemberTabButton =
+      document.querySelector(
+        "[data-member-tab].is-active"
+      );
+
+    if (activeMemberTabButton) {
+      sessionStorage.setItem(
+        "memberTabBeforeRefresh",
+        activeMemberTabButton.dataset.memberTab
+      );
+    }
+
     refreshMemberAppButton.disabled = true;
     refreshMemberAppButton.lastElementChild.textContent =
       "갱신 중...";
@@ -1875,6 +1887,7 @@ refreshMemberAppButton.addEventListener(
     }, 150);
   }
 );
+
 const adminMemberSearch = document.querySelector("#adminMemberSearch");
 const adminMemberSelect = document.querySelector("#adminMemberSelect");
 const adminMemberInfo = document.querySelector("#adminMemberInfo");
@@ -3478,7 +3491,18 @@ async function showWorkoutApp(userId) {
   adminScreen.hidden = true;
   appScreen.hidden = false;
 
-  showMemberTab("routine");
+  const memberTabBeforeRefresh =
+  sessionStorage.getItem("memberTabBeforeRefresh");
+
+showMemberTab(
+  memberTabPanels[memberTabBeforeRefresh]
+    ? memberTabBeforeRefresh
+    : "routine"
+);
+
+sessionStorage.removeItem(
+  "memberTabBeforeRefresh"
+);
   resetWorkoutCalendar();
 
   await Promise.all([
