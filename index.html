@@ -250,25 +250,21 @@
       <h2 id="adminRoutineEditorTitle" class="admin-section-title">
         회원 루틴 관리
       </h2>
-    
+
       <p id="adminRoutineModeMessage" class="admin-section-description">
         회원의 최신 루틴을 불러오고 있습니다.
       </p>
-    
-      <button
-        id="toggleAdminRoutineModeButton"
-        type="button"
-        hidden
-      >
+
+      <button id="toggleAdminRoutineModeButton" type="button" hidden>
         새 루틴 배정하기
       </button>
-    
+
       <label for="adminRoutineName">루틴 이름</label>
       <input id="adminRoutineName" type="text" placeholder="예: 2026년 9월 운동 루틴">
 
       <label for="adminRoutineImage">루틴 이미지</label>
       <input id="adminRoutineImage" type="file" accept="image/png, image/jpeg, image/webp">
-      
+
       <p id="adminRoutineImageHelp" class="admin-field-help">
         수정할 때 새 이미지를 선택하지 않으면 기존 이미지가 유지됩니다.
       </p>
@@ -313,6 +309,19 @@
       </p>
 
       <div id="adminCommunityImagePreview" class="admin-community-image-preview" aria-live="polite"></div>
+
+      <label for="adminCommunityVideoUrl">
+        유튜브 영상 주소
+      </label>
+
+      <input id="adminCommunityVideoUrl" type="url" inputmode="url" placeholder="유튜브 영상 또는 쇼츠 주소를 붙여넣으세요.">
+
+      <p class="admin-field-help">
+        일반 유튜브 영상과 유튜브 쇼츠 주소를 사용할 수 있습니다.
+        이미지나 영상 중 하나 이상을 등록해 주세요.
+      </p>
+
+      <div id="adminCommunityVideoPreview" class="admin-community-video-preview" aria-live="polite"></div>
 
       <label for="adminCommunityBody">
         소식 내용

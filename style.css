@@ -1938,3 +1938,114 @@ body.camera-open {
   opacity: 0.5;
   cursor: wait;
 }
+
+/* 센터 소식 유튜브 영상 */
+.admin-community-video-preview {
+  margin-top: 12px;
+}
+
+.community-video-area {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border: 1px solid #dbe2ec;
+  border-radius: 16px;
+  background: #0b1220;
+}
+
+.community-video-area.is-shorts {
+  width: min(100%, 320px);
+  aspect-ratio: 9 / 16;
+  margin-right: auto;
+  margin-left: auto;
+}
+
+.community-video-facade {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  border-radius: inherit;
+  background: #0b1220;
+  cursor: pointer;
+}
+
+.community-video-thumbnail {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.community-video-area.is-shorts
+  .community-video-thumbnail {
+  object-fit: cover;
+}
+
+.community-video-facade::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.05),
+    rgba(0, 0, 0, 0.36)
+  );
+}
+
+.community-video-play-button {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 1;
+  display: grid;
+  width: 64px;
+  height: 64px;
+  place-items: center;
+  padding-left: 4px;
+  border-radius: 50%;
+  color: #ffffff;
+  background: #ff6b00;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  transform: translate(-50%, -50%);
+}
+
+.community-video-play-text {
+  position: absolute;
+  bottom: 18px;
+  left: 50%;
+  z-index: 1;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 700;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.7);
+  transform: translateX(-50%);
+}
+
+.community-video-frame {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+.community-video-facade:focus-visible {
+  outline: 3px solid #ff6b00;
+  outline-offset: -3px;
+}
+
+@media (max-width: 480px) {
+  .community-video-play-button {
+    width: 56px;
+    height: 56px;
+  }
+
+  .community-video-play-text {
+    bottom: 14px;
+    font-size: 13px;
+  }
+}

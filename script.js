@@ -139,6 +139,221 @@ memberTabButtons.forEach((button) => {
   });
 });
 
+// 유튜브 영상 주소 분석
+function getYouTubeVideoData(videoUrl) {
+  const trimmedUrl =
+    String(videoUrl || "").trim();
+
+  if (!trimmedUrl) {
+    return null;
+  }
+
+  try {
+    const parsedUrl =
+      new URL(trimmedUrl);
+
+    const hostname =
+      parsedUrl.hostname
+        .toLowerCase()
+        .replace(/^www\./, "")
+        .replace(/^m\./, "");
+
+    let videoId = "";
+    let isShorts = false;
+
+    if (hostname === "youtu.be") {
+      videoId =
+        parsedUrl.pathname
+          .split("/")
+          .filter(Boolean)[0] || "";
+    } else if (
+      hostname === "youtube.com" ||
+      hostname === "youtube-nocookie.com"
+    ) {
+      const pathParts =
+        parsedUrl.pathname
+          .split("/")
+          .filter(Boolean);
+
+      if (pathParts[0] === "shorts") {
+        videoId = pathParts[1] || "";
+        isShorts = true;
+      } else if (
+        pathParts[0] === "embed" ||
+        pathParts[0] === "live"
+      ) {
+        videoId = pathParts[1] || "";
+      } else {
+        videoId =
+          parsedUrl.searchParams.get("v") || "";
+      }
+    } else {
+      return null;
+    }
+
+    if (
+      !/^[a-zA-Z0-9_-]{11}$/.test(videoId)
+    ) {
+      return null;
+    }
+
+    return {
+      videoId,
+      isShorts,
+      originalUrl: trimmedUrl,
+      thumbnailUrl:
+        `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
+      embedUrl:
+        `https://www.youtube-nocookie.com/embed/${videoId}` +
+        "?playsinline=1&rel=0"
+    };
+  } catch (urlError) {
+    return null;
+  }
+}
+
+let activeCommunityVideoArea = null;
+
+// 클릭할 때만 유튜브 플레이어 만들기
+function createCommunityVideoFacade(
+  videoUrl,
+  videoTitle
+) {
+  const videoData =
+    getYouTubeVideoData(videoUrl);
+
+  if (!videoData) {
+    return null;
+  }
+
+  const videoArea =
+    document.createElement("div");
+
+  videoArea.className =
+    "community-video-area";
+
+  if (videoData.isShorts) {
+    videoArea.classList.add(
+      "is-shorts"
+    );
+  }
+
+  const videoFacade =
+    document.createElement("button");
+
+  videoFacade.type = "button";
+  videoFacade.className =
+    "community-video-facade";
+
+  videoFacade.setAttribute(
+    "aria-label",
+    `${videoTitle || "센터 소식"} 영상 재생`
+  );
+
+  const thumbnail =
+    document.createElement("img");
+
+  thumbnail.className =
+    "community-video-thumbnail";
+
+  thumbnail.src =
+    videoData.thumbnailUrl;
+
+  thumbnail.alt =
+    `${videoTitle || "센터 소식"} 영상 미리보기`;
+
+  thumbnail.loading = "lazy";
+  thumbnail.decoding = "async";
+  thumbnail.draggable = false;
+
+  const playButton =
+    document.createElement("span");
+
+  playButton.className =
+    "community-video-play-button";
+
+  playButton.textContent = "▶";
+
+  const playText =
+    document.createElement("span");
+
+  playText.className =
+    "community-video-play-text";
+
+  playText.textContent =
+    "영상 재생";
+
+  videoFacade.append(
+    thumbnail,
+    playButton,
+    playText
+  );
+
+  videoArea.append(videoFacade);
+
+  // 다른 영상이 재생되면 이전 영상은 다시 썸네일로 변경
+  videoArea.resetCommunityVideo =
+    function () {
+      videoArea.replaceChildren(
+        videoFacade
+      );
+
+      if (
+        activeCommunityVideoArea ===
+        videoArea
+      ) {
+        activeCommunityVideoArea = null;
+      }
+    };
+
+  videoFacade.addEventListener(
+    "click",
+    function () {
+      if (
+        activeCommunityVideoArea &&
+        activeCommunityVideoArea !==
+        videoArea
+      ) {
+        activeCommunityVideoArea
+          .resetCommunityVideo();
+      }
+
+      const videoFrame =
+        document.createElement("iframe");
+
+      videoFrame.className =
+        "community-video-frame";
+
+      videoFrame.src =
+        `${videoData.embedUrl}&autoplay=1`;
+
+      videoFrame.title =
+        `${videoTitle || "센터 소식"} 유튜브 영상`;
+
+      videoFrame.loading = "lazy";
+
+      videoFrame.allow =
+        "accelerometer; autoplay; " +
+        "clipboard-write; encrypted-media; " +
+        "gyroscope; picture-in-picture; web-share";
+
+      videoFrame.referrerPolicy =
+        "strict-origin-when-cross-origin";
+
+      videoFrame.allowFullscreen = true;
+
+      videoArea.replaceChildren(
+        videoFrame
+      );
+
+      activeCommunityVideoArea =
+        videoArea;
+    }
+  );
+
+  return videoArea;
+}
+
 // 센터 소식 이미지 캐러셀 만들기
 function createCommunityImageCarousel(
   postImages,
@@ -2024,6 +2239,71 @@ const adminCommunityBody =
     "#adminCommunityBody"
   );
 
+const adminCommunityVideoUrl =
+  document.querySelector(
+    "#adminCommunityVideoUrl"
+  );
+
+const adminCommunityVideoPreview =
+  document.querySelector(
+    "#adminCommunityVideoPreview"
+  );
+
+// 관리자 영상 미리보기 표시
+function renderAdminCommunityVideoPreview() {
+  if (
+    activeCommunityVideoArea &&
+    adminCommunityVideoPreview.contains(
+      activeCommunityVideoArea
+    )
+  ) {
+    activeCommunityVideoArea = null;
+  }
+
+  adminCommunityVideoPreview.replaceChildren();
+
+  const videoUrl =
+    adminCommunityVideoUrl.value.trim();
+
+  if (!videoUrl) {
+    return;
+  }
+
+  const videoPreview =
+    createCommunityVideoFacade(
+      videoUrl,
+      adminCommunityTitle.value.trim() ||
+      "센터 소식"
+    );
+
+  if (!videoPreview) {
+    const errorMessage =
+      document.createElement("p");
+
+    errorMessage.className =
+      "admin-message";
+
+    errorMessage.textContent =
+      "올바른 유튜브 영상 또는 쇼츠 주소를 입력해 주세요.";
+
+    adminCommunityVideoPreview.append(
+      errorMessage
+    );
+
+    return;
+  }
+
+  adminCommunityVideoPreview.append(
+    videoPreview
+  );
+}
+
+// 영상 주소가 변경되면 미리보기 갱신
+adminCommunityVideoUrl.addEventListener(
+  "input",
+  renderAdminCommunityVideoPreview
+);
+
 const saveAdminCommunityButton =
   document.querySelector(
     "#saveAdminCommunityButton"
@@ -2572,6 +2852,9 @@ function resetAdminCommunityEditor() {
   adminCommunityTitle.value = "";
   adminCommunityBody.value = "";
 
+  adminCommunityVideoUrl.value = "";
+  renderAdminCommunityVideoPreview();
+
   resetAdminCommunityImages();
 
   adminCommunityEditorTitle.textContent =
@@ -2603,6 +2886,11 @@ function startAdminCommunityPostEdit(post) {
 
   adminCommunityBody.value =
     post.body || "";
+
+  adminCommunityVideoUrl.value =
+    post.video_url || "";
+
+  renderAdminCommunityVideoPreview();
 
   adminCommunityEditorTitle.textContent =
     "센터 소식 수정";
