@@ -1891,6 +1891,11 @@ const saveAdminRoutineButton = document.querySelector("#saveAdminRoutineButton")
 const adminSaveMessage = document.querySelector("#adminSaveMessage");
 
 // 관리자 센터 소식 작성 요소
+const adminCommunityEditorTitle =
+  document.querySelector(
+    "#adminCommunityEditorTitle"
+  );
+
 const adminCommunityTitle =
   document.querySelector(
     "#adminCommunityTitle"
@@ -1916,10 +1921,26 @@ const saveAdminCommunityButton =
     "#saveAdminCommunityButton"
   );
 
+  const cancelAdminCommunityEditButton =
+  document.querySelector(
+    "#cancelAdminCommunityEditButton"
+  );
+
 const adminCommunityMessage =
   document.querySelector(
     "#adminCommunityMessage"
   );
+
+  // 게시한 센터 소식 관리 요소
+const adminCommunityPostList =
+document.querySelector(
+  "#adminCommunityPostList"
+);
+
+const adminCommunityListMessage =
+document.querySelector(
+  "#adminCommunityListMessage"
+);
 
 // 선택된 센터 소식 이미지 파일
 let selectedAdminCommunityFiles = [];
@@ -1927,6 +1948,401 @@ let selectedAdminCommunityFiles = [];
 // 미리보기에 사용한 임시 주소
 let adminCommunityPreviewUrls = [];
 
+// 관리 화면에 불러온 센터 소식
+let loadedAdminCommunityPosts = [];
+let editingAdminCommunityPostId = null;
+let existingAdminCommunityImages = [];
+let removedAdminCommunityImages = [];
+
+// 관리자 센터 소식 목록 표시
+function renderAdminCommunityPostList(
+  posts
+) {
+  adminCommunityPostList.innerHTML = "";
+
+  if (!posts || posts.length === 0) {
+    adminCommunityListMessage.textContent =
+      "아직 게시한 센터 소식이 없습니다.";
+
+    return;
+  }
+
+  adminCommunityListMessage.textContent =
+    "";
+
+  posts.forEach(function (post) {
+    const manageCard =
+      document.createElement("article");
+
+    manageCard.className =
+      "admin-community-manage-card";
+
+    const manageMain =
+      document.createElement("div");
+
+    manageMain.className =
+      "admin-community-manage-main";
+
+    const postImages =
+      post.community_post_images || [];
+
+    const firstImage =
+      postImages[0];
+
+    if (firstImage) {
+      const thumbnail =
+        document.createElement("img");
+
+      thumbnail.className =
+        "admin-community-manage-thumbnail";
+
+      thumbnail.src =
+        firstImage.signedUrl;
+
+      thumbnail.alt =
+        firstImage.alt_text ||
+        `${post.title} 대표 이미지`;
+
+      thumbnail.loading = "lazy";
+
+      manageMain.append(thumbnail);
+    }
+
+    const manageInfo =
+      document.createElement("div");
+
+    manageInfo.className =
+      "admin-community-manage-info";
+
+    const manageTitle =
+      document.createElement("h3");
+
+    manageTitle.className =
+      "admin-community-manage-title";
+
+    manageTitle.textContent =
+      post.title;
+
+    const manageMeta =
+      document.createElement("p");
+
+    manageMeta.className =
+      "admin-community-manage-meta";
+
+    const dateText =
+      new Intl.DateTimeFormat(
+        "ko-KR",
+        {
+          year: "numeric",
+          month: "long",
+          day: "numeric"
+        }
+      ).format(
+        new Date(
+          post.published_at ||
+          post.created_at
+        )
+      );
+
+    manageMeta.textContent =
+      `${dateText} · 사진 ${postImages.length}장`;
+
+    manageInfo.append(
+      manageTitle,
+      manageMeta
+    );
+
+    manageMain.append(manageInfo);
+
+    const actionArea =
+      document.createElement("div");
+
+    actionArea.className =
+      "admin-community-manage-actions";
+
+    const editButton =
+      document.createElement("button");
+
+    editButton.type = "button";
+    editButton.className =
+      "admin-community-edit-button";
+
+    editButton.textContent = "수정";
+
+    editButton.addEventListener(
+      "click",
+      function () {
+        startAdminCommunityPostEdit(
+          post
+        );
+      }
+    );
+
+    const deleteButton =
+      document.createElement("button");
+
+    deleteButton.type = "button";
+    deleteButton.className =
+      "admin-community-delete-button";
+
+    deleteButton.textContent = "삭제";
+
+    deleteButton.addEventListener(
+      "click",
+      function () {
+        deleteAdminCommunityPost(
+          post,
+          deleteButton
+        );
+      }
+    );
+
+    actionArea.append(
+      editButton,
+      deleteButton
+    );
+
+    manageCard.append(
+      manageMain,
+      actionArea
+    );
+
+    adminCommunityPostList.append(
+      manageCard
+    );
+  });
+}
+
+
+// 관리자용 센터 소식 불러오기
+async function loadAdminCommunityPosts() {
+  adminCommunityPostList.innerHTML = "";
+
+  adminCommunityListMessage.textContent =
+    "센터 소식을 불러오고 있습니다.";
+
+  try {
+    const {
+      data: posts,
+      error: postsError
+    } = await supabaseClient
+      .from("community_posts")
+      .select(`
+        id,
+        title,
+        body,
+        published_at,
+        created_at,
+        community_post_images (
+          id,
+          storage_path,
+          alt_text,
+          sort_order
+        )
+      `)
+      .eq("is_published", true)
+      .order(
+        "published_at",
+        { ascending: false }
+      );
+
+    if (postsError) {
+      throw postsError;
+    }
+
+    loadedAdminCommunityPosts =
+      await Promise.all(
+        (posts || []).map(
+          async function (post) {
+            const sortedImages = [
+              ...(post.community_post_images || [])
+            ].sort(
+              function (first, second) {
+                return (
+                  first.sort_order -
+                  second.sort_order
+                );
+              }
+            );
+
+            const imagesWithUrls =
+              await Promise.all(
+                sortedImages.map(
+                  async function (image) {
+                    const {
+                      data: signedImageData,
+                      error: signedImageError
+                    } =
+                      await supabaseClient.storage
+                        .from("community-images")
+                        .createSignedUrl(
+                          image.storage_path,
+                          3600
+                        );
+
+                    if (signedImageError) {
+                      throw signedImageError;
+                    }
+
+                    return {
+                      ...image,
+                      signedUrl:
+                        signedImageData.signedUrl
+                    };
+                  }
+                )
+              );
+
+            return {
+              ...post,
+              community_post_images:
+                imagesWithUrls
+            };
+          }
+        )
+      );
+
+    renderAdminCommunityPostList(
+      loadedAdminCommunityPosts
+    );
+
+  } catch (loadError) {
+    console.error(
+      "관리자 센터 소식 불러오기 실패:",
+      loadError
+    );
+
+    loadedAdminCommunityPosts = [];
+
+    adminCommunityListMessage.textContent =
+      `센터 소식을 불러오지 못했습니다: ${
+        loadError.message ||
+        "알 수 없는 오류"
+      }`;
+  }
+}
+
+// 관리자 센터 소식 삭제
+async function deleteAdminCommunityPost(
+  post,
+  deleteButton
+) {
+  const deleteConfirmed =
+    window.confirm(
+      `"${post.title}" 소식을 삭제할까요?\n\n삭제한 글과 사진은 복구할 수 없습니다.`
+    );
+
+  if (!deleteConfirmed) {
+    return;
+  }
+
+  const imagePaths =
+    (
+      post.community_post_images || []
+    )
+      .map(function (image) {
+        return image.storage_path;
+      })
+      .filter(Boolean);
+
+  deleteButton.disabled = true;
+  deleteButton.textContent = "삭제 중...";
+
+  adminCommunityListMessage.textContent =
+    "센터 소식을 삭제하고 있습니다.";
+
+  try {
+    /*
+      회원 화면에서 게시물이 먼저 사라지도록
+      DB 게시물과 연결 정보를 삭제
+    */
+    const {
+      data: deletedPosts,
+      error: postDeleteError
+    } = await supabaseClient
+      .from("community_posts")
+      .delete()
+      .eq("id", post.id)
+      .select("id");
+
+    if (postDeleteError) {
+      throw postDeleteError;
+    }
+
+    if (
+      !deletedPosts ||
+      deletedPosts.length === 0
+    ) {
+      throw new Error(
+        "삭제할 센터 소식을 찾을 수 없습니다."
+      );
+    }
+
+    /*
+      DB 삭제 후 Storage의 실제 사진 파일 정리
+    */
+    let imageCleanupError = null;
+
+    if (imagePaths.length > 0) {
+      const {
+        error: storageDeleteError
+      } = await supabaseClient.storage
+        .from("community-images")
+        .remove(imagePaths);
+
+      imageCleanupError =
+        storageDeleteError;
+    }
+
+    if (
+      editingAdminCommunityPostId === post.id
+    ) {
+      resetAdminCommunityEditor();
+    }
+
+    await loadAdminCommunityPosts();
+
+    if (imageCleanupError) {
+      console.error(
+        "삭제된 소식의 이미지 정리 실패:",
+        imageCleanupError
+      );
+
+      adminCommunityListMessage.textContent =
+        "소식은 삭제했지만 사진 파일 정리에 실패했습니다.";
+
+      return;
+    }
+
+    adminCommunityListMessage.textContent =
+      "센터 소식을 삭제했습니다.";
+
+    setTimeout(function () {
+      if (
+        adminCommunityListMessage.textContent ===
+        "센터 소식을 삭제했습니다."
+      ) {
+        adminCommunityListMessage.textContent =
+          "";
+      }
+    }, 2500);
+
+  } catch (deleteError) {
+    console.error(
+      "센터 소식 삭제 실패:",
+      deleteError
+    );
+
+    adminCommunityListMessage.textContent =
+      `삭제 실패: ${
+        deleteError.message ||
+        "알 수 없는 오류"
+      }`;
+
+    deleteButton.disabled = false;
+    deleteButton.textContent = "삭제";
+  }
+}
 
 // 미리보기 화면과 임시 주소 정리
 function clearAdminCommunityImagePreview() {
@@ -1954,77 +2370,163 @@ function resetAdminCommunityImages() {
 function renderAdminCommunityImagePreview() {
   clearAdminCommunityImagePreview();
 
-  selectedAdminCommunityFiles.forEach(
-    function (file, index) {
-      const previewUrl =
-        URL.createObjectURL(file);
+  // 수정 중인 소식에 이미 저장되어 있던 사진
+  existingAdminCommunityImages.forEach(function (image, index) {
+    const previewItem = document.createElement("div");
+    previewItem.className = "admin-community-preview-item";
 
-      adminCommunityPreviewUrls.push(
-        previewUrl
-      );
+    const previewImage = document.createElement("img");
+    previewImage.src = image.signedUrl;
+    previewImage.alt = `기존 소식 이미지 ${index + 1}`;
 
-      const previewItem =
-        document.createElement("div");
+    const previewNumber = document.createElement("span");
+    previewNumber.className = "admin-community-preview-number";
+    previewNumber.textContent = String(index + 1);
 
-      previewItem.className =
-        "admin-community-preview-item";
+    const removeButton = document.createElement("button");
+    removeButton.type = "button";
+    removeButton.className = "admin-community-preview-remove";
+    removeButton.textContent = "×";
+    removeButton.setAttribute(
+      "aria-label",
+      `${index + 1}번 기존 이미지 삭제`
+    );
 
-      const previewImage =
-        document.createElement("img");
+    removeButton.addEventListener("click", function () {
+      const [removedImage] =
+        existingAdminCommunityImages.splice(index, 1);
 
-      previewImage.src = previewUrl;
-      previewImage.alt =
-        `선택한 소식 이미지 ${index + 1}`;
+      if (removedImage) {
+        removedAdminCommunityImages.push(removedImage);
+      }
 
-      const previewNumber =
-        document.createElement("span");
+      adminCommunityMessage.textContent = "";
+      renderAdminCommunityImagePreview();
+    });
 
-      previewNumber.className =
-        "admin-community-preview-number";
+    previewItem.append(
+      previewImage,
+      previewNumber,
+      removeButton
+    );
 
-      previewNumber.textContent =
-        String(index + 1);
+    adminCommunityImagePreview.append(previewItem);
+  });
 
-      const removeButton =
-        document.createElement("button");
+  // 이번에 새로 선택한 사진
+  selectedAdminCommunityFiles.forEach(function (file, index) {
+    const combinedIndex =
+      existingAdminCommunityImages.length + index;
 
-      removeButton.type = "button";
-      removeButton.className =
-        "admin-community-preview-remove";
-      removeButton.textContent = "×";
+    const previewUrl = URL.createObjectURL(file);
+    adminCommunityPreviewUrls.push(previewUrl);
 
-      removeButton.setAttribute(
-        "aria-label",
-        `${index + 1}번 이미지 선택 취소`
-      );
+    const previewItem = document.createElement("div");
+    previewItem.className = "admin-community-preview-item";
 
-      removeButton.addEventListener(
-        "click",
-        function () {
-          selectedAdminCommunityFiles.splice(
-            index,
-            1
-          );
+    const previewImage = document.createElement("img");
+    previewImage.src = previewUrl;
+    previewImage.alt = `새 소식 이미지 ${combinedIndex + 1}`;
 
-          adminCommunityMessage.textContent = "";
+    const previewNumber = document.createElement("span");
+    previewNumber.className = "admin-community-preview-number";
+    previewNumber.textContent = String(combinedIndex + 1);
 
-          renderAdminCommunityImagePreview();
-        }
-      );
+    const removeButton = document.createElement("button");
+    removeButton.type = "button";
+    removeButton.className = "admin-community-preview-remove";
+    removeButton.textContent = "×";
+    removeButton.setAttribute(
+      "aria-label",
+      `${combinedIndex + 1}번 새 이미지 선택 취소`
+    );
 
-      previewItem.append(
-        previewImage,
-        previewNumber,
-        removeButton
-      );
+    removeButton.addEventListener("click", function () {
+      selectedAdminCommunityFiles.splice(index, 1);
+      adminCommunityMessage.textContent = "";
+      renderAdminCommunityImagePreview();
+    });
 
-      adminCommunityImagePreview.append(
-        previewItem
-      );
-    }
-  );
+    previewItem.append(
+      previewImage,
+      previewNumber,
+      removeButton
+    );
+
+    adminCommunityImagePreview.append(previewItem);
+  });
 }
 
+// 센터 소식 작성 화면 초기화
+function resetAdminCommunityEditor() {
+  editingAdminCommunityPostId = null;
+  existingAdminCommunityImages = [];
+  removedAdminCommunityImages = [];
+
+  adminCommunityTitle.value = "";
+  adminCommunityBody.value = "";
+
+  resetAdminCommunityImages();
+
+  adminCommunityEditorTitle.textContent =
+    "센터 소식 작성";
+
+  saveAdminCommunityButton.textContent =
+    "센터 소식 게시";
+
+  cancelAdminCommunityEditButton.hidden = true;
+  adminCommunityMessage.textContent = "";
+}
+
+
+// 기존 센터 소식 수정 시작
+function startAdminCommunityPostEdit(post) {
+  editingAdminCommunityPostId = post.id;
+
+  existingAdminCommunityImages = [
+    ...(post.community_post_images || [])
+  ];
+
+  removedAdminCommunityImages = [];
+  selectedAdminCommunityFiles = [];
+
+  adminCommunityImages.value = "";
+
+  adminCommunityTitle.value =
+    post.title || "";
+
+  adminCommunityBody.value =
+    post.body || "";
+
+  adminCommunityEditorTitle.textContent =
+    "센터 소식 수정";
+
+  saveAdminCommunityButton.textContent =
+    "수정 내용 저장";
+
+  cancelAdminCommunityEditButton.hidden = false;
+
+  adminCommunityMessage.textContent =
+    "기존 내용을 수정한 뒤 저장해 주세요.";
+
+  renderAdminCommunityImagePreview();
+
+  document
+    .querySelector("#adminCommunityEditor")
+    .scrollIntoView({
+      behavior: "smooth",
+      block: "start"
+    });
+
+  adminCommunityTitle.focus();
+}
+
+
+// 수정 취소 버튼 연결
+cancelAdminCommunityEditButton.addEventListener(
+  "click",
+  resetAdminCommunityEditor
+);
 
 // 센터 소식 이미지 추가 선택
 adminCommunityImages.addEventListener(
@@ -2086,9 +2588,10 @@ adminCommunityImages.addEventListener(
       );
 
     if (
+      existingAdminCommunityImages.length +
       selectedAdminCommunityFiles.length +
-        filesToAdd.length >
-      5
+      filesToAdd.length >
+    5
     ) {
       adminCommunityMessage.textContent =
         "이미지는 최대 5장까지 선택할 수 있습니다.";
@@ -2286,6 +2789,301 @@ async function optimizeCommunityImage(
   }
 }
 
+// 기존 센터 소식 수정 저장
+async function updateAdminCommunityPost(
+  title,
+  body
+) {
+  const postId =
+    editingAdminCommunityPostId;
+
+  const uploadedImagePaths = [];
+
+  const removedImageIds =
+    removedAdminCommunityImages
+      .map(function (image) {
+        return image.id;
+      })
+      .filter(Boolean);
+
+  const removedImagePaths =
+    removedAdminCommunityImages
+      .map(function (image) {
+        return image.storage_path;
+      })
+      .filter(Boolean);
+
+  saveAdminCommunityButton.disabled = true;
+  saveAdminCommunityButton.textContent =
+    "수정 저장 중...";
+
+  adminCommunityMessage.textContent =
+    "센터 소식을 수정하고 있습니다.";
+
+  try {
+    if (!postId) {
+      throw new Error(
+        "수정할 센터 소식을 확인할 수 없습니다."
+      );
+    }
+
+    const newImageRows = [];
+
+    // 새로 선택한 사진 업로드
+    for (
+      let index = 0;
+      index <
+        selectedAdminCommunityFiles.length;
+      index += 1
+    ) {
+      const originalFile =
+        selectedAdminCommunityFiles[index];
+
+      adminCommunityMessage.textContent =
+        `새 이미지 ${index + 1}/${
+          selectedAdminCommunityFiles.length
+        } 최적화 중...`;
+
+      const file =
+        await optimizeCommunityImage(
+          originalFile
+        );
+
+      adminCommunityMessage.textContent =
+        `새 이미지 ${index + 1}/${
+          selectedAdminCommunityFiles.length
+        } 업로드 중...`;
+
+      const extensionByType = {
+        "image/jpeg": "jpg",
+        "image/png": "png",
+        "image/webp": "webp"
+      };
+
+      const fileExtension =
+        extensionByType[file.type] || "jpg";
+
+      const uniqueName =
+        `${Date.now()}-${index}-` +
+        `${Math.random()
+          .toString(36)
+          .slice(2)}.${fileExtension}`;
+
+      const storagePath =
+        `${postId}/${uniqueName}`;
+
+      const {
+        error: uploadError
+      } = await supabaseClient.storage
+        .from("community-images")
+        .upload(
+          storagePath,
+          file,
+          {
+            cacheControl: "3600",
+            upsert: false,
+            contentType: file.type
+          }
+        );
+
+      if (uploadError) {
+        throw uploadError;
+      }
+
+      uploadedImagePaths.push(
+        storagePath
+      );
+
+      newImageRows.push({
+        post_id: postId,
+        storage_path: storagePath,
+        alt_text:
+          `${title} 이미지 ${
+            existingAdminCommunityImages.length +
+            index +
+            1
+          }`,
+        sort_order:
+          existingAdminCommunityImages.length +
+          index
+      });
+    }
+
+    // 새 사진 정보를 데이터베이스에 저장
+    if (newImageRows.length > 0) {
+      const {
+        error: imageInsertError
+      } = await supabaseClient
+        .from("community_post_images")
+        .insert(newImageRows);
+
+      if (imageInsertError) {
+        throw imageInsertError;
+      }
+    }
+
+    // 남아 있는 기존 사진 순서 정리
+    for (
+      let index = 0;
+      index <
+        existingAdminCommunityImages.length;
+      index += 1
+    ) {
+      const image =
+        existingAdminCommunityImages[index];
+
+      const {
+        error: imageUpdateError
+      } = await supabaseClient
+        .from("community_post_images")
+        .update({
+          sort_order: index,
+          alt_text:
+            `${title} 이미지 ${index + 1}`
+        })
+        .eq("id", image.id)
+        .eq("post_id", postId);
+
+      if (imageUpdateError) {
+        throw imageUpdateError;
+      }
+    }
+
+    // 제목과 내용 수정
+    const {
+      data: updatedPosts,
+      error: postUpdateError
+    } = await supabaseClient
+      .from("community_posts")
+      .update({
+        title: title,
+        body: body,
+        updated_at:
+          new Date().toISOString()
+      })
+      .eq("id", postId)
+      .select("id");
+
+    if (postUpdateError) {
+      throw postUpdateError;
+    }
+
+    if (
+      !updatedPosts ||
+      updatedPosts.length === 0
+    ) {
+      throw new Error(
+        "수정할 센터 소식을 찾을 수 없습니다."
+      );
+    }
+
+    // 삭제 표시한 기존 사진 정보 제거
+    if (removedImageIds.length > 0) {
+      const {
+        error: imageDeleteError
+      } = await supabaseClient
+        .from("community_post_images")
+        .delete()
+        .eq("post_id", postId)
+        .in("id", removedImageIds);
+
+      if (imageDeleteError) {
+        throw imageDeleteError;
+      }
+    }
+
+    let storageCleanupError = null;
+
+    // 삭제한 기존 사진 파일 제거
+    if (removedImagePaths.length > 0) {
+      const {
+        error: removeStorageError
+      } = await supabaseClient.storage
+        .from("community-images")
+        .remove(removedImagePaths);
+
+      storageCleanupError =
+        removeStorageError;
+    }
+
+    resetAdminCommunityEditor();
+    await loadAdminCommunityPosts();
+
+    if (storageCleanupError) {
+      console.error(
+        "삭제한 소식 이미지 파일 정리 실패:",
+        storageCleanupError
+      );
+
+      adminCommunityMessage.textContent =
+        "소식은 수정했지만 일부 사진 파일 정리에 실패했습니다.";
+
+      return;
+    }
+
+    adminCommunityMessage.textContent =
+      "센터 소식을 수정했습니다.";
+
+  } catch (updateError) {
+    console.error(
+      "센터 소식 수정 실패:",
+      updateError
+    );
+
+    /*
+      수정 도중 실패하면 이번에 새로 올린
+      사진 정보와 파일만 정리
+    */
+    if (uploadedImagePaths.length > 0) {
+      const {
+        error: cleanupRowsError
+      } = await supabaseClient
+        .from("community_post_images")
+        .delete()
+        .eq("post_id", postId)
+        .in(
+          "storage_path",
+          uploadedImagePaths
+        );
+
+      if (cleanupRowsError) {
+        console.error(
+          "새 이미지 정보 정리 실패:",
+          cleanupRowsError
+        );
+      }
+
+      const {
+        error: cleanupFilesError
+      } = await supabaseClient.storage
+        .from("community-images")
+        .remove(uploadedImagePaths);
+
+      if (cleanupFilesError) {
+        console.error(
+          "새 이미지 파일 정리 실패:",
+          cleanupFilesError
+        );
+      }
+    }
+
+    adminCommunityMessage.textContent =
+      `수정 실패: ${
+        updateError.message ||
+        "알 수 없는 오류"
+      }`;
+
+  } finally {
+    saveAdminCommunityButton.disabled =
+      false;
+
+    saveAdminCommunityButton.textContent =
+      editingAdminCommunityPostId
+        ? "수정 내용 저장"
+        : "센터 소식 게시";
+  }
+}
+
 // 센터 소식 게시
 async function saveAdminCommunityPost() {
   const title =
@@ -2310,23 +3108,36 @@ async function saveAdminCommunityPost() {
     return;
   }
 
-  if (
-    selectedAdminCommunityFiles.length === 0
-  ) {
-    adminCommunityMessage.textContent =
-      "소식 이미지를 1장 이상 선택해 주세요.";
+  const totalImageCount =
+  existingAdminCommunityImages.length +
+  selectedAdminCommunityFiles.length;
 
-    return;
-  }
+if (totalImageCount === 0) {
+  adminCommunityMessage.textContent =
+    "소식 이미지를 1장 이상 선택해 주세요.";
 
-  if (
-    selectedAdminCommunityFiles.length > 5
-  ) {
-    adminCommunityMessage.textContent =
-      "이미지는 최대 5장까지 선택할 수 있습니다.";
+  return;
+}
 
-    return;
-  }
+if (totalImageCount > 5) {
+  adminCommunityMessage.textContent =
+    "이미지는 최대 5장까지 선택할 수 있습니다.";
+
+  return;
+}
+
+/*
+  수정 중이라면 새 게시물을 만들지 않고
+  기존 게시물 수정 함수 실행
+*/
+if (editingAdminCommunityPostId) {
+  await updateAdminCommunityPost(
+    title,
+    body
+  );
+
+  return;
+}
 
   saveAdminCommunityButton.disabled = true;
   saveAdminCommunityButton.textContent =
@@ -2490,6 +3301,8 @@ async function saveAdminCommunityPost() {
     adminCommunityBody.value = "";
 
     resetAdminCommunityImages();
+
+    await loadAdminCommunityPosts();
 
     adminCommunityMessage.textContent =
       "센터 소식을 게시했습니다.";
@@ -2832,7 +3645,10 @@ async function showAdminApp() {
   adminMemberInfo.textContent = "루틴을 관리할 회원을 선택해 주세요.";
   adminMemberSearch.value = "";
 
-  await loadAdminMembers();
+  await Promise.all([
+    loadAdminMembers(),
+    loadAdminCommunityPosts()
+  ]);
 }
 
 // 현재 로그인한 계정의 역할에 따라 화면 선택

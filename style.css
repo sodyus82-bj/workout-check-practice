@@ -1677,3 +1677,131 @@ body {
 body.camera-open {
   overflow: hidden;
 }
+
+/* 관리자 센터 소식 관리 목록 */
+.admin-community-post-list {
+  display: grid;
+  gap: 12px;
+}
+
+#adminCommunityListMessage:empty {
+  display: none;
+}
+
+/* 관리할 소식 한 개 */
+.admin-community-manage-card {
+  display: grid;
+  gap: 13px;
+  padding: 14px;
+  background-color: #f8f9fb;
+  border: 1px solid var(--brand-border);
+  border-radius: 14px;
+}
+
+/* 소식 이미지와 정보 */
+.admin-community-manage-main {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  min-width: 0;
+}
+
+.admin-community-manage-thumbnail {
+  flex: 0 0 72px;
+  width: 72px;
+  height: 72px;
+  object-fit: cover;
+  background-color: #edf0f4;
+  border: 1px solid #dce1e9;
+  border-radius: 10px;
+}
+
+.admin-community-manage-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.admin-community-manage-title {
+  margin: 0;
+  color: var(--brand-navy);
+  font-size: 16px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.admin-community-manage-meta {
+  margin: 6px 0 0;
+  color: #7a8494;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+/* 수정·삭제 버튼 영역 */
+.admin-community-manage-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.admin-community-edit-button,
+.admin-community-delete-button {
+  width: 100%;
+  padding: 10px 12px;
+  background-color: var(--brand-white);
+  border-radius: 9px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.admin-community-edit-button {
+  color: var(--brand-navy);
+  border: 1px solid var(--brand-navy);
+}
+
+.admin-community-delete-button {
+  color: #a44738;
+  border: 1px solid #d7a49b;
+}
+
+.admin-community-edit-button:active {
+  color: var(--brand-white);
+  background-color: var(--brand-navy);
+}
+
+.admin-community-delete-button:active {
+  color: var(--brand-white);
+  background-color: #a44738;
+}
+
+.admin-community-edit-button:disabled,
+.admin-community-delete-button:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}
+
+/* 센터 소식 수정 취소 버튼 */
+.admin-community-cancel-edit-button {
+  width: 100%;
+  margin-top: 8px;
+  padding: 11px 12px;
+  color: #667085;
+  background-color: var(--brand-white);
+  border: 1px solid #cbd3df;
+  border-radius: 9px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.admin-community-cancel-edit-button:active {
+  color: var(--brand-white);
+  background-color: #667085;
+}
+
+.admin-community-cancel-edit-button:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}

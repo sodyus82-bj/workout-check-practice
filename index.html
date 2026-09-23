@@ -7,7 +7,7 @@
 
   <title>오늘의 운동 체크</title>
 
-  <link rel="stylesheet" href="style.css?v=13">
+  <link rel="stylesheet" href="style.css?v=14">
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#ec6a1a">
 
@@ -162,13 +162,7 @@
       <button id="openWorkoutCameraButton" class="workout-camera-button" type="button">
         📷 지금 순간을 기록하기
       </button>
-      <input
-  id="workoutNativeCameraInput"
-  type="file"
-  accept="image/*"
-  capture="environment"
-  hidden
->
+      <input id="workoutNativeCameraInput" type="file" accept="image/*" capture="environment" hidden>
 
       <section id="workoutRecordList" class="workout-record-list" aria-label="나의 운동 기록">
         <p id="emptyWorkoutRecordMessage">
@@ -184,18 +178,11 @@
         <h1>센터와 함께<br>소통해 보세요</h1>
       </header>
 
-      <section
-      id="communityPostList"
-      class="community-post-list"
-      aria-live="polite"
-    >
-      <p
-        id="communityStatusMessage"
-        class="community-status-message"
-      >
-        센터 소식을 불러오고 있습니다.
-      </p>
-    </section>
+      <section id="communityPostList" class="community-post-list" aria-live="polite">
+        <p id="communityStatusMessage" class="community-status-message">
+          센터 소식을 불러오고 있습니다.
+        </p>
+      </section>
     </section>
     <img class="screen-logo screen-logo-bottom" src="images/center-logo.png" alt="헬스와 필라테스 화곡점">
     <nav class="member-bottom-nav" role="tablist" aria-label="회원 메뉴">
@@ -264,69 +251,64 @@
 
     <!-- 센터 커뮤니티 소식 작성 -->
     <section id="adminCommunityEditor" class="admin-card">
-      <h2 class="admin-section-title">
+      <h2 id="adminCommunityEditorTitle" class="admin-section-title">
         센터 소식 작성
       </h2>
 
       <p class="admin-section-description">
         회원에게 전달할 새로운 센터 소식을 작성합니다.
       </p>
-      
+
       <label for="adminCommunityTitle">
         소식 제목
       </label>
 
-      <input
-        id="adminCommunityTitle"
-        type="text"
-        maxlength="100"
-        placeholder="예: 센터 대청소를 완료했습니다"
-      >
+      <input id="adminCommunityTitle" type="text" maxlength="100" placeholder="예: 센터 대청소를 완료했습니다">
 
       <label for="adminCommunityImages">
         소식 이미지
       </label>
 
-      <input
-        id="adminCommunityImages"
-        type="file"
-        accept="image/png, image/jpeg, image/webp"
-        multiple
-      >
+      <input id="adminCommunityImages" type="file" accept="image/png, image/jpeg, image/webp" multiple>
 
       <p class="admin-field-help">
         이미지는 최대 5장까지 선택할 수 있습니다.
       </p>
 
-      <div
-        id="adminCommunityImagePreview"
-        class="admin-community-image-preview"
-        aria-live="polite"
-      ></div>
+      <div id="adminCommunityImagePreview" class="admin-community-image-preview" aria-live="polite"></div>
 
       <label for="adminCommunityBody">
         소식 내용
       </label>
 
-      <textarea
-        id="adminCommunityBody"
-        rows="8"
-        maxlength="5000"
-        placeholder="회원에게 전달할 내용을 입력하세요."
-      ></textarea>
+      <textarea id="adminCommunityBody" rows="8" maxlength="5000" placeholder="회원에게 전달할 내용을 입력하세요."></textarea>
 
-      <button
-        id="saveAdminCommunityButton"
-        type="button"
-      >
+      <button id="saveAdminCommunityButton" type="button">
         센터 소식 게시
       </button>
 
-      <p
-        id="adminCommunityMessage"
-        class="admin-message"
-        aria-live="polite"
-      ></p>
+      <button id="cancelAdminCommunityEditButton" class="admin-community-cancel-edit-button" type="button" hidden>
+        수정 취소
+      </button>
+
+      <p id="adminCommunityMessage" class="admin-message" aria-live="polite"></p>
+    </section>
+
+    <!-- 게시한 센터 소식 관리 -->
+    <section id="adminCommunityManagement" class="admin-card">
+      <h2 class="admin-section-title">
+        게시한 센터 소식
+      </h2>
+
+      <p class="admin-section-description">
+        기존 소식을 수정하거나 삭제할 수 있습니다.
+      </p>
+
+      <p id="adminCommunityListMessage" class="admin-message" aria-live="polite">
+        센터 소식을 불러오고 있습니다.
+      </p>
+
+      <div id="adminCommunityPostList" class="admin-community-post-list"></div>
     </section>
 
     <button id="adminLogoutButton" class="zoom-button" type="button">
@@ -402,7 +384,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-  <script src="script.js?v=13"></script>
+  <script src="script.js?v=14"></script>
 </body>
 
 
