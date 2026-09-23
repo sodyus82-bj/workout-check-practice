@@ -7,7 +7,11 @@
 
   <title>오늘의 운동 체크</title>
 
-  <link rel="stylesheet" href="style.css?v=18">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Nanum+Pen+Script&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="style.css?v=19">
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#ec6a1a">
 
@@ -104,7 +108,7 @@
     <section id="routineTabPanel" class="member-tab-panel" role="tabpanel" aria-labelledby="routineTabButton">
       <header class="header">
         <p class="label">오늘의 운동</p>
-        <h1>운동을 하나씩<br>완료해 보세요</h1>
+        <h2>운동 루틴을 완료해 보세요</h2>
       </header>
       <div class="member-toolbar">
         <p>
@@ -137,7 +141,7 @@
       hidden>
       <header class="header">
         <p class="label">운동 기록</p>
-        <h1>오늘의 순간을<br>기록해 보세요</h1>
+        <h2>운동 세팅을 기록해 보세요</h2>
       </header>
 
       <section class="workout-calendar-card" aria-labelledby="workoutCalendarMonthLabel">
@@ -168,6 +172,10 @@
         <div id="workoutCalendarDays" class="workout-calendar-days" role="grid" aria-label="운동 기록 달력"></div>
       </section>
 
+      <button id="showAllWorkoutRecordsButton" class="show-all-workout-records-button" type="button" hidden>
+        전체 운동 기록 보기
+      </button>
+
       <button id="openWorkoutCameraButton" class="workout-camera-button" type="button">
         📷 지금 순간을 기록하기
       </button>
@@ -184,7 +192,7 @@
       hidden>
       <header class="header">
         <p class="label">센터 커뮤니티</p>
-        <h1>센터와 함께<br>소통해 보세요</h1>
+        <h2>센터와 소통해 보세요</h2>
       </header>
 
       <section id="communityPostList" class="community-post-list" aria-live="polite">
@@ -393,7 +401,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-  <script src="script.js?v=18"></script>
+  <script src="script.js?v=19"></script>
 </body>
 
 

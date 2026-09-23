@@ -474,7 +474,7 @@ function renderCommunityPosts(posts) {
     return;
   }
 
-  posts.forEach(function (post) {
+  posts.forEach(function (post, postIndex) {
     const postCard =
       document.createElement("article");
 
@@ -549,6 +549,23 @@ function renderCommunityPosts(posts) {
       postContent
     );
 
+    if (postIndex > 0) {
+      const postSeparator =
+        document.createElement("div");
+    
+      postSeparator.className =
+        "content-list-separator";
+    
+      postSeparator.setAttribute(
+        "aria-hidden",
+        "true"
+      );
+    
+      communityPostList.append(
+        postSeparator
+      );
+    }
+    
     communityPostList.append(postCard);
   });
 }
@@ -675,6 +692,11 @@ const previousWorkoutMonthButton =
 const nextWorkoutMonthButton =
   document.querySelector("#nextWorkoutMonthButton");
 
+const showAllWorkoutRecordsButton =
+  document.querySelector(
+    "#showAllWorkoutRecordsButton"
+  );
+
 // 현재 캘린더에 표시할 월
 let visibleWorkoutMonth = new Date();
 visibleWorkoutMonth.setDate(1);
@@ -701,6 +723,9 @@ let workoutRecordsRequestId = 0;
 // 사용자가 선택한 날짜
 let selectedWorkoutDate = "";
 
+// 처음 들어올 때 최근 운동 기록 날짜를 자동 선택
+let shouldSelectLatestWorkoutDate = true;
+
 // 날짜를 2026-09-22 형태로 만들기
 function makeWorkoutDateKey(year, monthIndex, day) {
   const month = String(monthIndex + 1).padStart(2, "0");
@@ -722,6 +747,10 @@ function getWorkoutRecordDateKey(takenAt) {
 // 저장된 운동 기록 목록 표시
 function renderWorkoutRecords() {
   workoutRecordList.innerHTML = "";
+
+  showAllWorkoutRecordsButton.hidden =
+    !selectedWorkoutDate ||
+    workoutRecords.length === 0;
 
   const recordsToShow = selectedWorkoutDate
     ? workoutRecords.filter((record) => {
@@ -745,7 +774,7 @@ function renderWorkoutRecords() {
     return;
   }
 
-  recordsToShow.forEach((record) => {
+  recordsToShow.forEach((record, recordIndex) => {
     const recordCard =
       document.createElement("article");
 
@@ -935,8 +964,24 @@ function renderWorkoutRecords() {
       recordFooter
     );
 
-    workoutRecordList.append(recordCard);
-  });
+    if (recordIndex > 0) {
+      const recordSeparator =
+        document.createElement("div");
+    
+      recordSeparator.className =
+        "content-list-separator";
+    
+      recordSeparator.setAttribute(
+        "aria-hidden",
+        "true"
+      );
+    
+      workoutRecordList.append(
+        recordSeparator
+      );
+    }
+    
+    workoutRecordList.append(recordCard);  });
 }
 
 // 로그인한 회원의 운동 기록 불러오기
@@ -1029,6 +1074,28 @@ async function loadWorkoutRecords(userId) {
 
   workoutRecords =
     recordsWithSignedUrls.filter(Boolean);
+
+  if (
+    shouldSelectLatestWorkoutDate &&
+    workoutRecords.length > 0
+  ) {
+    const latestWorkoutDate =
+      new Date(workoutRecords[0].taken_at);
+
+    selectedWorkoutDate =
+      getWorkoutRecordDateKey(
+        workoutRecords[0].taken_at
+      );
+
+    visibleWorkoutMonth =
+      new Date(
+        latestWorkoutDate.getFullYear(),
+        latestWorkoutDate.getMonth(),
+        1
+      );
+  }
+
+  shouldSelectLatestWorkoutDate = false;
 
   workoutRecordDates = new Set(
     workoutRecords.map((record) => {
@@ -1292,11 +1359,23 @@ nextWorkoutMonthButton.addEventListener(
   }
 );
 
+// 날짜 선택을 해제하고 전체 운동 기록 보기
+showAllWorkoutRecordsButton.addEventListener(
+  "click",
+  function () {
+    selectedWorkoutDate = "";
+
+    renderWorkoutCalendar();
+    renderWorkoutRecords();
+  }
+);
+
 // 로그인할 때 이번 달로 초기화
 function resetWorkoutCalendar() {
   visibleWorkoutMonth = new Date();
   visibleWorkoutMonth.setDate(1);
   selectedWorkoutDate = "";
+  shouldSelectLatestWorkoutDate = true;
 
   renderWorkoutCalendar();
 }
@@ -3492,17 +3571,17 @@ async function showWorkoutApp(userId) {
   appScreen.hidden = false;
 
   const memberTabBeforeRefresh =
-  sessionStorage.getItem("memberTabBeforeRefresh");
+    sessionStorage.getItem("memberTabBeforeRefresh");
 
-showMemberTab(
-  memberTabPanels[memberTabBeforeRefresh]
-    ? memberTabBeforeRefresh
-    : "routine"
-);
+  showMemberTab(
+    memberTabPanels[memberTabBeforeRefresh]
+      ? memberTabBeforeRefresh
+      : "routine"
+  );
 
-sessionStorage.removeItem(
-  "memberTabBeforeRefresh"
-);
+  sessionStorage.removeItem(
+    "memberTabBeforeRefresh"
+  );
   resetWorkoutCalendar();
 
   await Promise.all([
