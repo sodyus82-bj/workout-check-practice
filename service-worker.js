@@ -1,10 +1,10 @@
-const CACHE_NAME = "workout-check-v20";
+const CACHE_NAME = "workout-check-v21";
 
 const APP_FILES = [
   "./",
   "./index.html",
-  "./style.css?v=20",
-  "./script.js?v=20",
+  "./style.css?v=21",
+  "./script.js?v=21",
   "./manifest.json",
   "./images/routine-guide.png",
   "./images/center-logo.png",

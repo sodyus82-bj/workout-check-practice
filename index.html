@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Nanum+Pen+Script&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="style.css?v=20">
+  <link rel="stylesheet" href="style.css?v=21">
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#ec6a1a">
 
@@ -247,11 +247,31 @@
     </section>
 
     <section id="adminRoutineEditor" class="admin-card" hidden>
+      <h2 id="adminRoutineEditorTitle" class="admin-section-title">
+        회원 루틴 관리
+      </h2>
+    
+      <p id="adminRoutineModeMessage" class="admin-section-description">
+        회원의 최신 루틴을 불러오고 있습니다.
+      </p>
+    
+      <button
+        id="toggleAdminRoutineModeButton"
+        type="button"
+        hidden
+      >
+        새 루틴 배정하기
+      </button>
+    
       <label for="adminRoutineName">루틴 이름</label>
       <input id="adminRoutineName" type="text" placeholder="예: 2026년 9월 운동 루틴">
 
       <label for="adminRoutineImage">루틴 이미지</label>
       <input id="adminRoutineImage" type="file" accept="image/png, image/jpeg, image/webp">
+      
+      <p id="adminRoutineImageHelp" class="admin-field-help">
+        수정할 때 새 이미지를 선택하지 않으면 기존 이미지가 유지됩니다.
+      </p>
 
       <img id="adminRoutinePreview" alt="선택한 루틴 이미지 미리보기" hidden>
       <label for="adminRoutineDescription">루틴 설명과 링크</label>
@@ -401,7 +421,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-  <script src="script.js?v=20"></script>
+  <script src="script.js?v=21"></script>
 </body>
 
 
