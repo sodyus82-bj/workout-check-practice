@@ -101,6 +101,654 @@ const communityStatusMessage =
     "#communityStatusMessage"
   );
 
+  // 회원 1:1 문의 요소
+const memberInquiryAvailabilityMessage =
+document.querySelector(
+  "#memberInquiryAvailabilityMessage"
+);
+
+const memberInquiryComposer =
+document.querySelector(
+  "#memberInquiryComposer"
+);
+
+const memberInquiryTitle =
+document.querySelector(
+  "#memberInquiryTitle"
+);
+
+const memberInquiryBody =
+document.querySelector(
+  "#memberInquiryBody"
+);
+
+const sendMemberInquiryButton =
+document.querySelector(
+  "#sendMemberInquiryButton"
+);
+
+const memberInquirySubmitMessage =
+document.querySelector(
+  "#memberInquirySubmitMessage"
+);
+
+const memberInquiryListMessage =
+document.querySelector(
+  "#memberInquiryListMessage"
+);
+
+const memberInquiryList =
+document.querySelector(
+  "#memberInquiryList"
+);
+
+let isMemberInquiryEnabled = false;
+let openMemberInquiryId = null;
+
+
+// 회원 문의 기능 온·오프 상태 불러오기
+async function loadMemberInquirySetting() {
+memberInquiryComposer.hidden = true;
+
+memberInquiryAvailabilityMessage.textContent =
+  "문의 기능을 확인하고 있습니다.";
+
+try {
+  const {
+    data: inquirySetting,
+    error: inquirySettingError
+  } = await supabaseClient
+    .from("app_settings")
+    .select("is_enabled")
+    .eq(
+      "setting_key",
+      "member_inquiry_enabled"
+    )
+    .maybeSingle();
+
+  if (inquirySettingError) {
+    throw inquirySettingError;
+  }
+
+  isMemberInquiryEnabled =
+    inquirySetting?.is_enabled === true;
+
+  memberInquiryComposer.hidden =
+    !isMemberInquiryEnabled;
+
+  memberInquiryAvailabilityMessage.textContent =
+    isMemberInquiryEnabled
+      ? "문의 내용을 남기면 센터 관리자가 확인 후 답변해 드립니다."
+      : "현재 1:1 문의 접수가 중단되어 있습니다. 기존 문의와 답변은 계속 확인할 수 있습니다.";
+
+} catch (settingError) {
+  console.error(
+    "회원 문의 설정 불러오기 실패:",
+    settingError
+  );
+
+  isMemberInquiryEnabled = false;
+  memberInquiryComposer.hidden = true;
+
+  memberInquiryAvailabilityMessage.textContent =
+    "문의 기능 상태를 확인하지 못했습니다.";
+}
+}
+
+// 회원의 새 1:1 문의 전송
+async function sendMemberInquiry() {
+  const title =
+    memberInquiryTitle.value.trim();
+
+  const body =
+    memberInquiryBody.value.trim();
+
+  if (!isMemberInquiryEnabled) {
+    memberInquirySubmitMessage.textContent =
+      "현재 1:1 문의 접수가 중단되어 있습니다.";
+
+    return;
+  }
+
+  if (!title) {
+    memberInquirySubmitMessage.textContent =
+      "문의 제목을 입력해 주세요.";
+
+    memberInquiryTitle.focus();
+    return;
+  }
+
+  if (!body) {
+    memberInquirySubmitMessage.textContent =
+      "문의 내용을 입력해 주세요.";
+
+    memberInquiryBody.focus();
+    return;
+  }
+
+  sendMemberInquiryButton.disabled = true;
+  sendMemberInquiryButton.textContent =
+    "문의 전송 중...";
+
+  memberInquirySubmitMessage.textContent =
+    "문의를 저장하고 있습니다.";
+
+  try {
+    const {
+      error: createInquiryError
+    } = await supabaseClient.rpc(
+      "create_member_inquiry",
+      {
+        p_title: title,
+        p_body: body
+      }
+    );
+
+    if (createInquiryError) {
+      throw createInquiryError;
+    }
+
+    memberInquiryTitle.value = "";
+    memberInquiryBody.value = "";
+
+    memberInquirySubmitMessage.textContent =
+      "문의를 전송했습니다.";
+
+    await loadMemberInquiries();
+
+  } catch (sendError) {
+    console.error(
+      "회원 문의 전송 실패:",
+      sendError
+    );
+
+    memberInquirySubmitMessage.textContent =
+      `문의 전송 실패: ${
+        sendError.message ||
+        "알 수 없는 오류"
+      }`;
+
+    /*
+      관리자가 문의 기능을 끈 직후라면
+      작성 영역도 최신 설정으로 다시 변경
+    */
+    await loadMemberInquirySetting();
+
+  } finally {
+    sendMemberInquiryButton.disabled = false;
+    sendMemberInquiryButton.textContent =
+      "문의 보내기";
+  }
+}
+
+
+// 문의 보내기 버튼 연결
+sendMemberInquiryButton.addEventListener(
+  "click",
+  sendMemberInquiry
+);
+
+// 문의 작성 날짜 표시
+function formatMemberInquiryDate(dateValue) {
+  if (!dateValue) {
+    return "";
+  }
+
+  return new Intl.DateTimeFormat(
+    "ko-KR",
+    {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit"
+    }
+  ).format(
+    new Date(dateValue)
+  );
+}
+
+// 기존 문의방에 회원의 추가 질문 저장
+async function sendMemberInquiryReply(
+  inquiryId,
+  replyInput,
+  replyButton,
+  replyMessage
+) {
+  const body =
+    replyInput.value.trim();
+
+  if (!isMemberInquiryEnabled) {
+    replyMessage.textContent =
+      "현재 추가 질문 접수가 중단되어 있습니다.";
+
+    return;
+  }
+
+  if (!body) {
+    replyMessage.textContent =
+      "추가 질문 내용을 입력해 주세요.";
+
+    replyInput.focus();
+    return;
+  }
+
+  replyButton.disabled = true;
+  replyButton.textContent =
+    "전송 중...";
+
+  replyMessage.textContent =
+    "추가 질문을 저장하고 있습니다.";
+
+  try {
+    const {
+      data: { user },
+      error: userError
+    } = await supabaseClient.auth.getUser();
+
+    if (userError || !user) {
+      throw new Error(
+        "로그인 정보를 확인할 수 없습니다."
+      );
+    }
+
+    const {
+      error: replyInsertError
+    } = await supabaseClient
+      .from("inquiry_messages")
+      .insert({
+        inquiry_id: inquiryId,
+        sender_id: user.id,
+        sender_role: "member",
+        body: body
+      });
+
+    if (replyInsertError) {
+      throw replyInsertError;
+    }
+
+    replyInput.value = "";
+
+    /*
+      목록을 다시 불러온 뒤에도
+      작성한 문의방이 열린 상태로 유지
+    */
+    openMemberInquiryId =
+      inquiryId;
+
+    await loadMemberInquiries();
+
+  } catch (replyError) {
+    console.error(
+      "회원 추가 질문 전송 실패:",
+      replyError
+    );
+
+    replyMessage.textContent =
+      `추가 질문 전송 실패: ${
+        replyError.message ||
+        "알 수 없는 오류"
+      }`;
+
+  } finally {
+    if (replyButton.isConnected) {
+      replyButton.disabled = false;
+      replyButton.textContent =
+        "추가 질문 보내기";
+    }
+  }
+}
+
+// 회원 문의 목록 표시
+function renderMemberInquiries(inquiries) {
+  memberInquiryList.replaceChildren();
+
+  if (!inquiries || inquiries.length === 0) {
+    memberInquiryListMessage.textContent =
+      "아직 작성한 문의가 없습니다.";
+
+    return;
+  }
+
+  memberInquiryListMessage.textContent = "";
+
+  inquiries.forEach(function (inquiry) {
+    const inquiryCard =
+      document.createElement("article");
+
+    inquiryCard.className =
+      "member-inquiry-card";
+
+    const summaryButton =
+      document.createElement("button");
+
+    summaryButton.type = "button";
+    summaryButton.className =
+      "member-inquiry-summary-button";
+
+    const summaryTop =
+      document.createElement("span");
+
+    summaryTop.className =
+      "member-inquiry-summary-top";
+
+    const inquiryTitle =
+      document.createElement("strong");
+
+    inquiryTitle.className =
+      "member-inquiry-card-title";
+
+    inquiryTitle.textContent =
+      inquiry.title;
+
+    const statusBadge =
+      document.createElement("span");
+
+    statusBadge.className =
+      inquiry.status === "answered"
+        ? "member-inquiry-status is-answered"
+        : "member-inquiry-status is-waiting";
+
+    statusBadge.textContent =
+      inquiry.status === "answered"
+        ? "답변 완료"
+        : "답변 대기";
+
+    summaryTop.append(
+      inquiryTitle,
+      statusBadge
+    );
+
+    const inquiryMeta =
+      document.createElement("span");
+
+    inquiryMeta.className =
+      "member-inquiry-card-meta";
+
+    inquiryMeta.textContent =
+      formatMemberInquiryDate(
+        inquiry.last_message_at ||
+        inquiry.created_at
+      );
+
+    summaryButton.append(
+      summaryTop,
+      inquiryMeta
+    );
+
+    const threadArea =
+      document.createElement("div");
+
+    threadArea.className =
+      "member-inquiry-thread";
+
+    threadArea.id =
+      `memberInquiryThread-${inquiry.id}`;
+
+      const isThreadOpen =
+      openMemberInquiryId === inquiry.id;
+    
+    threadArea.hidden =
+      !isThreadOpen;
+    
+    summaryButton.setAttribute(
+      "aria-expanded",
+      String(isThreadOpen)
+    );
+
+    summaryButton.setAttribute(
+      "aria-controls",
+      threadArea.id
+    );
+
+    const sortedMessages = [
+      ...(inquiry.inquiry_messages || [])
+    ].sort(function (first, second) {
+      return (
+        new Date(first.created_at) -
+        new Date(second.created_at)
+      );
+    });
+
+    sortedMessages.forEach(
+      function (message) {
+        const messageCard =
+          document.createElement("article");
+
+        messageCard.className =
+          message.sender_role === "admin"
+            ? "member-inquiry-message is-admin"
+            : "member-inquiry-message is-member";
+
+        const messageLabel =
+          document.createElement("strong");
+
+        messageLabel.className =
+          "member-inquiry-message-label";
+
+        messageLabel.textContent =
+          message.sender_role === "admin"
+            ? "센터 답변"
+            : "내 질문";
+
+        const messageBody =
+          document.createElement("p");
+
+        messageBody.className =
+          "member-inquiry-message-body";
+
+        messageBody.textContent =
+          message.body;
+
+        const messageDate =
+          document.createElement("time");
+
+        messageDate.className =
+          "member-inquiry-message-date";
+
+        messageDate.dateTime =
+          message.created_at || "";
+
+        messageDate.textContent =
+          formatMemberInquiryDate(
+            message.created_at
+          );
+
+        messageCard.append(
+          messageLabel,
+          messageBody,
+          messageDate
+        );
+
+        threadArea.append(messageCard);
+      }
+    );
+
+    if (isMemberInquiryEnabled) {
+      const replyArea =
+        document.createElement("div");
+
+      replyArea.className =
+        "member-inquiry-reply-area";
+
+      const replyLabel =
+        document.createElement("label");
+
+      const replyInputId =
+        `memberInquiryReply-${inquiry.id}`;
+
+      replyLabel.htmlFor =
+        replyInputId;
+
+      replyLabel.textContent =
+        "추가 질문";
+
+      const replyInput =
+        document.createElement("textarea");
+
+      replyInput.id =
+        replyInputId;
+
+      replyInput.rows = 3;
+      replyInput.maxLength = 5000;
+
+      replyInput.placeholder =
+        "같은 문의에 이어서 질문할 내용을 입력해 주세요.";
+
+      const replyButton =
+        document.createElement("button");
+
+      replyButton.type = "button";
+      replyButton.textContent =
+        "추가 질문 보내기";
+
+      const replyMessage =
+        document.createElement("p");
+
+      replyMessage.className =
+        "member-inquiry-reply-message";
+
+      replyMessage.setAttribute(
+        "aria-live",
+        "polite"
+      );
+
+      replyButton.addEventListener(
+        "click",
+        function () {
+          sendMemberInquiryReply(
+            inquiry.id,
+            replyInput,
+            replyButton,
+            replyMessage
+          );
+        }
+      );
+
+      replyArea.append(
+        replyLabel,
+        replyInput,
+        replyButton,
+        replyMessage
+      );
+
+      threadArea.append(replyArea);
+
+    } else {
+      const disabledMessage =
+        document.createElement("p");
+
+      disabledMessage.className =
+        "member-inquiry-reply-disabled-message";
+
+      disabledMessage.textContent =
+        "현재 추가 질문 접수가 중단되어 있습니다.";
+
+      threadArea.append(
+        disabledMessage
+      );
+    }
+
+    summaryButton.addEventListener(
+      "click",
+      function () {
+        const willOpen =
+        threadArea.hidden;
+      
+      threadArea.hidden =
+        !willOpen;
+      
+      openMemberInquiryId =
+        willOpen
+          ? inquiry.id
+          : null;
+      
+      summaryButton.setAttribute(
+        "aria-expanded",
+        String(willOpen)
+      );
+    }
+  );
+
+    inquiryCard.append(
+      summaryButton,
+      threadArea
+    );
+
+    memberInquiryList.append(
+      inquiryCard
+    );
+  });
+}
+
+
+// 회원 본인의 문의와 답변 불러오기
+async function loadMemberInquiries() {
+  memberInquiryList.replaceChildren();
+
+  memberInquiryListMessage.textContent =
+    "문의 내역을 불러오고 있습니다.";
+
+  try {
+    const {
+      data: { user },
+      error: userError
+    } = await supabaseClient.auth.getUser();
+
+    if (userError || !user) {
+      throw new Error(
+        "로그인 정보를 확인할 수 없습니다."
+      );
+    }
+
+    const {
+      data: inquiries,
+      error: inquiriesError
+    } = await supabaseClient
+      .from("member_inquiries")
+      .select(`
+        id,
+        title,
+        status,
+        created_at,
+        updated_at,
+        last_message_at,
+        inquiry_messages (
+          id,
+          sender_id,
+          sender_role,
+          body,
+          created_at
+        )
+      `)
+      .eq("user_id", user.id)
+      .order(
+        "last_message_at",
+        { ascending: false }
+      );
+
+    if (inquiriesError) {
+      throw inquiriesError;
+    }
+
+    renderMemberInquiries(
+      inquiries || []
+    );
+
+  } catch (loadError) {
+    console.error(
+      "회원 문의 내역 불러오기 실패:",
+      loadError
+    );
+
+    memberInquiryListMessage.textContent =
+      `문의 내역을 불러오지 못했습니다: ${
+        loadError.message ||
+        "알 수 없는 오류"
+      }`;
+  }
+}
+
 // 선택한 회원 탭 표시
 function showMemberTab(tabName) {
   // 센터 커뮤니티를 벗어나면 재생 중인 영상 정지
@@ -2357,6 +3005,686 @@ const adminCommunityListMessage =
     "#adminCommunityListMessage"
   );
 
+// 관리자 1:1 문의 관리 요소
+const toggleAdminInquiryFeatureButton =
+  document.querySelector(
+    "#toggleAdminInquiryFeatureButton"
+  );
+
+const adminInquirySettingMessage =
+  document.querySelector(
+    "#adminInquirySettingMessage"
+  );
+
+const adminInquiryListMessage =
+  document.querySelector(
+    "#adminInquiryListMessage"
+  );
+
+const adminInquiryList =
+  document.querySelector(
+    "#adminInquiryList"
+  );
+
+let isAdminInquiryEnabled = false;
+
+
+// 관리자 문의 설정 버튼 표시
+function renderAdminInquirySetting(
+  isEnabled
+) {
+  isAdminInquiryEnabled =
+    isEnabled === true;
+
+  toggleAdminInquiryFeatureButton.disabled =
+    false;
+
+  toggleAdminInquiryFeatureButton.setAttribute(
+    "aria-pressed",
+    String(isAdminInquiryEnabled)
+  );
+
+  toggleAdminInquiryFeatureButton.textContent =
+    isAdminInquiryEnabled
+      ? "접수 중"
+      : "접수 중단";
+}
+
+
+// 관리자 문의 설정 불러오기
+async function loadAdminInquirySetting() {
+  toggleAdminInquiryFeatureButton.disabled =
+    true;
+
+  toggleAdminInquiryFeatureButton.textContent =
+    "설정 확인 중";
+
+  adminInquirySettingMessage.textContent =
+    "";
+
+  try {
+    const {
+      data: inquirySetting,
+      error: inquirySettingError
+    } = await supabaseClient
+      .from("app_settings")
+      .select("is_enabled")
+      .eq(
+        "setting_key",
+        "member_inquiry_enabled"
+      )
+      .single();
+
+    if (inquirySettingError) {
+      throw inquirySettingError;
+    }
+
+    renderAdminInquirySetting(
+      inquirySetting.is_enabled
+    );
+
+  } catch (settingError) {
+    console.error(
+      "관리자 문의 설정 불러오기 실패:",
+      settingError
+    );
+
+    toggleAdminInquiryFeatureButton.disabled =
+      true;
+
+    toggleAdminInquiryFeatureButton.textContent =
+      "확인 실패";
+
+    adminInquirySettingMessage.textContent =
+      `문의 설정을 불러오지 못했습니다: ${
+        settingError.message ||
+        "알 수 없는 오류"
+      }`;
+  }
+}
+
+
+// 관리자 문의 기능 온·오프 변경
+async function toggleAdminInquiryFeature() {
+  const nextEnabled =
+    !isAdminInquiryEnabled;
+
+  if (
+    !nextEnabled &&
+    !window.confirm(
+      "회원의 새 문의와 추가 질문 접수를 중단할까요?\n\n기존 문의와 답변 기록은 계속 유지됩니다."
+    )
+  ) {
+    return;
+  }
+
+  toggleAdminInquiryFeatureButton.disabled =
+    true;
+
+  adminInquirySettingMessage.textContent =
+    "문의 설정을 변경하고 있습니다.";
+
+  try {
+    const {
+      data: { user },
+      error: userError
+    } = await supabaseClient.auth.getUser();
+
+    if (userError || !user) {
+      throw new Error(
+        "로그인 정보를 확인할 수 없습니다."
+      );
+    }
+
+    const {
+      data: updatedSetting,
+      error: updateError
+    } = await supabaseClient
+      .from("app_settings")
+      .update({
+        is_enabled: nextEnabled,
+        updated_at:
+          new Date().toISOString(),
+        updated_by: user.id
+      })
+      .eq(
+        "setting_key",
+        "member_inquiry_enabled"
+      )
+      .select("is_enabled")
+      .single();
+
+    if (updateError) {
+      throw updateError;
+    }
+
+    renderAdminInquirySetting(
+      updatedSetting.is_enabled
+    );
+
+    adminInquirySettingMessage.textContent =
+      updatedSetting.is_enabled
+        ? "회원 문의 접수를 시작했습니다."
+        : "회원 문의 접수를 중단했습니다.";
+
+  } catch (toggleError) {
+    console.error(
+      "관리자 문의 설정 변경 실패:",
+      toggleError
+    );
+
+    adminInquirySettingMessage.textContent =
+      `설정 변경 실패: ${
+        toggleError.message ||
+        "알 수 없는 오류"
+      }`;
+
+    toggleAdminInquiryFeatureButton.disabled =
+      false;
+  }
+}
+
+
+toggleAdminInquiryFeatureButton.addEventListener(
+  "click",
+  toggleAdminInquiryFeature
+);
+
+let openAdminInquiryId = null;
+
+// 관리자가 회원 문의에 답변하기
+async function sendAdminInquiryReply(
+  inquiryId,
+  replyInput,
+  replyButton,
+  replyMessage
+) {
+  const body = replyInput.value.trim();
+
+  if (!body) {
+    replyMessage.textContent =
+      "답변 내용을 입력해 주세요.";
+
+    replyInput.focus();
+    return;
+  }
+
+  replyButton.disabled = true;
+  replyButton.textContent = "답변 저장 중...";
+  replyMessage.textContent = "";
+
+  try {
+    const {
+      data: { user },
+      error: userError
+    } = await supabaseClient.auth.getUser();
+
+    if (userError || !user) {
+      throw new Error(
+        "관리자 로그인 정보를 확인할 수 없습니다."
+      );
+    }
+
+    const { error: replyInsertError } =
+      await supabaseClient
+        .from("inquiry_messages")
+        .insert({
+          inquiry_id: inquiryId,
+          sender_id: user.id,
+          sender_role: "admin",
+          body
+        });
+
+    if (replyInsertError) {
+      throw replyInsertError;
+    }
+
+    replyInput.value = "";
+    openAdminInquiryId = inquiryId;
+
+    await loadAdminInquiries();
+  } catch (replyError) {
+    console.error(
+      "관리자 문의 답변 저장 실패:",
+      replyError
+    );
+
+    replyMessage.textContent =
+      `답변 저장 실패: ${
+        replyError.message || "알 수 없는 오류"
+      }`;
+  } finally {
+    replyButton.disabled = false;
+    replyButton.textContent = "답변 보내기";
+  }
+}
+
+// 관리자 화면에 회원 문의 표시
+function renderAdminInquiries(inquiries) {
+  adminInquiryList.replaceChildren();
+
+  if (!inquiries || inquiries.length === 0) {
+    adminInquiryListMessage.textContent =
+      "아직 접수된 회원 문의가 없습니다.";
+
+    return;
+  }
+
+  adminInquiryListMessage.textContent = "";
+
+  inquiries.forEach(function (inquiry) {
+    const memberProfile =
+      inquiry.memberProfile || {};
+
+    const memberName =
+      memberProfile.display_name ||
+      memberProfile.email ||
+      "회원";
+
+    const memberDetails = [];
+
+    if (memberProfile.phone_last4) {
+      memberDetails.push(
+        `전화번호 끝자리 ${memberProfile.phone_last4}`
+      );
+    }
+
+    if (memberProfile.email) {
+      memberDetails.push(
+        memberProfile.email
+      );
+    }
+
+    const inquiryCard =
+      document.createElement("article");
+
+    inquiryCard.className =
+      "admin-inquiry-card";
+
+    const summaryButton =
+      document.createElement("button");
+
+    summaryButton.type = "button";
+    summaryButton.className =
+      "admin-inquiry-summary-button";
+
+    const threadId =
+      `adminInquiryThread-${inquiry.id}`;
+
+    summaryButton.setAttribute(
+      "aria-controls",
+      threadId
+    );
+
+    const isOpen =
+      openAdminInquiryId === inquiry.id;
+
+    summaryButton.setAttribute(
+      "aria-expanded",
+      String(isOpen)
+    );
+
+    const summaryTop =
+      document.createElement("span");
+
+    summaryTop.className =
+      "admin-inquiry-summary-top";
+
+    const memberLabel =
+      document.createElement("strong");
+
+    memberLabel.className =
+      "admin-inquiry-member-name";
+
+    memberLabel.textContent =
+      memberName;
+
+    const statusBadge =
+      document.createElement("span");
+
+    statusBadge.className =
+      `admin-inquiry-status is-${inquiry.status}`;
+
+    statusBadge.textContent =
+      inquiry.status === "answered"
+        ? "답변 완료"
+        : "답변 대기";
+
+    summaryTop.append(
+      memberLabel,
+      statusBadge
+    );
+
+    const inquiryTitle =
+      document.createElement("span");
+
+    inquiryTitle.className =
+      "admin-inquiry-title";
+
+    inquiryTitle.textContent =
+      inquiry.title;
+
+    const inquiryMeta =
+      document.createElement("span");
+
+    inquiryMeta.className =
+      "admin-inquiry-meta";
+
+    const latestMessageDate =
+      inquiry.last_message_at ||
+      inquiry.created_at;
+
+    const memberDetailText =
+      memberDetails.length > 0
+        ? ` · ${memberDetails.join(" · ")}`
+        : "";
+
+    inquiryMeta.textContent =
+      formatMemberInquiryDate(
+        latestMessageDate
+      ) + memberDetailText;
+
+    summaryButton.append(
+      summaryTop,
+      inquiryTitle,
+      inquiryMeta
+    );
+
+    const threadArea =
+      document.createElement("div");
+
+    threadArea.id = threadId;
+    threadArea.className =
+      "admin-inquiry-thread";
+
+    threadArea.hidden = !isOpen;
+
+    const messages = [
+      ...(inquiry.inquiry_messages || [])
+    ].sort(function (
+      firstMessage,
+      secondMessage
+    ) {
+      return (
+        new Date(firstMessage.created_at) -
+        new Date(secondMessage.created_at)
+      );
+    });
+
+    messages.forEach(function (message) {
+      const messageCard =
+        document.createElement("div");
+
+      messageCard.className =
+        message.sender_role === "admin"
+          ? "member-inquiry-message is-admin"
+          : "member-inquiry-message is-member";
+
+      const messageLabel =
+        document.createElement("strong");
+
+      messageLabel.className =
+        "member-inquiry-message-label";
+
+      messageLabel.textContent =
+        message.sender_role === "admin"
+          ? "센터 답변"
+          : memberName;
+
+      const messageBody =
+        document.createElement("p");
+
+      messageBody.className =
+        "member-inquiry-message-body";
+
+      messageBody.textContent =
+        message.body;
+
+      const messageDate =
+        document.createElement("time");
+
+      messageDate.className =
+        "member-inquiry-message-date";
+
+      messageDate.dateTime =
+        message.created_at || "";
+
+      messageDate.textContent =
+        formatMemberInquiryDate(
+          message.created_at
+        );
+
+      messageCard.append(
+        messageLabel,
+        messageBody,
+        messageDate
+      );
+
+      threadArea.append(
+        messageCard
+      );
+    });
+
+    const replyArea =
+      document.createElement("div");
+
+    replyArea.className =
+      "admin-inquiry-reply-area";
+
+    const replyLabel =
+      document.createElement("label");
+
+    const replyInputId =
+      `adminInquiryReply-${inquiry.id}`;
+
+    replyLabel.htmlFor =
+      replyInputId;
+
+    replyLabel.textContent =
+      "관리자 답변";
+
+    const replyInput =
+      document.createElement("textarea");
+
+    replyInput.id = replyInputId;
+    replyInput.rows = 4;
+    replyInput.maxLength = 5000;
+
+    replyInput.placeholder =
+      "회원에게 전달할 답변을 입력하세요.";
+
+    const replyButton =
+      document.createElement("button");
+
+    replyButton.type = "button";
+    replyButton.textContent =
+      "답변 보내기";
+
+    const replyMessage =
+      document.createElement("p");
+
+    replyMessage.className =
+      "admin-inquiry-reply-message";
+
+    replyMessage.setAttribute(
+      "aria-live",
+      "polite"
+    );
+
+    replyButton.addEventListener(
+      "click",
+      function () {
+        sendAdminInquiryReply(
+          inquiry.id,
+          replyInput,
+          replyButton,
+          replyMessage
+        );
+      }
+    );
+
+    replyArea.append(
+      replyLabel,
+      replyInput,
+      replyButton,
+      replyMessage
+    );
+
+    threadArea.append(
+      replyArea
+    );
+
+    summaryButton.addEventListener(
+      "click",
+      function () {
+        const willOpen =
+          threadArea.hidden;
+
+        threadArea.hidden =
+          !willOpen;
+
+        openAdminInquiryId =
+          willOpen
+            ? inquiry.id
+            : null;
+
+        summaryButton.setAttribute(
+          "aria-expanded",
+          String(willOpen)
+        );
+      }
+    );
+
+    inquiryCard.append(
+      summaryButton,
+      threadArea
+    );
+
+    adminInquiryList.append(
+      inquiryCard
+    );
+  });
+}
+
+// 관리자용 회원 문의 목록 불러오기
+async function loadAdminInquiries() {
+  adminInquiryList.replaceChildren();
+
+  adminInquiryListMessage.textContent =
+    "회원 문의를 불러오고 있습니다.";
+
+  try {
+    const {
+      data: inquiries,
+      error: inquiriesError
+    } = await supabaseClient
+      .from("member_inquiries")
+      .select(`
+        id,
+        user_id,
+        title,
+        status,
+        created_at,
+        updated_at,
+        last_message_at,
+        inquiry_messages (
+          id,
+          sender_id,
+          sender_role,
+          body,
+          created_at
+        )
+      `)
+      .order(
+        "status",
+        { ascending: false }
+      )
+      .order(
+        "last_message_at",
+        { ascending: false }
+      );
+
+    if (inquiriesError) {
+      throw inquiriesError;
+    }
+
+    const memberIds = [
+      ...new Set(
+        (inquiries || []).map(
+          function (inquiry) {
+            return inquiry.user_id;
+          }
+        )
+      )
+    ];
+
+    let memberProfiles = [];
+
+    if (memberIds.length > 0) {
+      const {
+        data: profiles,
+        error: profilesError
+      } = await supabaseClient
+        .from("profiles")
+        .select(`
+          id,
+          display_name,
+          email,
+          phone_last4
+        `)
+        .in("id", memberIds);
+
+      if (profilesError) {
+        throw profilesError;
+      }
+
+      memberProfiles =
+        profiles || [];
+    }
+
+    const profileById =
+      new Map(
+        memberProfiles.map(
+          function (profile) {
+            return [
+              profile.id,
+              profile
+            ];
+          }
+        )
+      );
+
+    const inquiriesWithProfiles =
+      (inquiries || []).map(
+        function (inquiry) {
+          return {
+            ...inquiry,
+            memberProfile:
+              profileById.get(
+                inquiry.user_id
+              ) || null
+          };
+        }
+      );
+
+    renderAdminInquiries(
+      inquiriesWithProfiles
+    );
+
+  } catch (loadError) {
+    console.error(
+      "관리자 회원 문의 불러오기 실패:",
+      loadError
+    );
+
+    adminInquiryListMessage.textContent =
+      `회원 문의를 불러오지 못했습니다: ${
+        loadError.message ||
+        "알 수 없는 오류"
+      }`;
+  }
+}
+
 // 선택된 센터 소식 이미지 파일
 let selectedAdminCommunityFiles = [];
 
@@ -4170,7 +5498,9 @@ async function showWorkoutApp(userId) {
   await Promise.all([
     loadMemberRoutine(userId),
     loadWorkoutRecords(userId),
-    loadCommunityPosts()
+    loadCommunityPosts(),
+    loadMemberInquirySetting(),
+    loadMemberInquiries()
   ]);
 }
 
@@ -4329,7 +5659,9 @@ async function showAdminApp() {
 
   await Promise.all([
     loadAdminMembers(),
-    loadAdminCommunityPosts()
+    loadAdminCommunityPosts(),
+    loadAdminInquirySetting(),
+    loadAdminInquiries()
   ]);
 }
 
