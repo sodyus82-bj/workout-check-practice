@@ -541,18 +541,6 @@ function renderCommunityPosts(posts) {
       postBody
     );
 
-    if (postImages.length > 1) {
-      const swipeGuide =
-        document.createElement("p");
-
-      swipeGuide.className =
-        "community-swipe-guide";
-
-      swipeGuide.textContent =
-        `사진 ${postImages.length}장 · 옆으로 넘겨보세요`;
-
-      postContent.append(swipeGuide);
-    }
 
     postContent.append(postDate);
 
