@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Nanum+Pen+Script&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="style.css?v=28">
+  <link rel="stylesheet" href="style.css?v=29">
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#ec6a1a">
 
@@ -123,6 +123,11 @@
         target="_blank" rel="noopener noreferrer">
         ✍️ 새 루틴 신청하기
       </a>
+
+      <p id="routineRequestStatusMessage" class="routine-request-status-message" aria-live="polite" hidden>
+        새로운 루틴을 구성하는 중입니다.
+      </p>
+
       <figure class="routine-image">
         <img id="routineImage" src="images/routine-guide.png" alt="월간 운동 루틴 안내표">
       </figure>
@@ -562,7 +567,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-  <script src="script.js?v=28"></script>
+  <script src="script.js?v=29"></script>
 </body>
 
 

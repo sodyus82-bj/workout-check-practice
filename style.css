@@ -665,6 +665,19 @@ body {
   text-decoration: none;
 }
 
+.routine-request-status-message {
+  margin: -14px 0 26px;
+  color: var(--brand-orange);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.4;
+  text-align: center;
+}
+
+.routine-request-status-message[hidden] {
+  display: none;
+}
+
 .routine-description {
   position: relative;
   max-height: 190px;

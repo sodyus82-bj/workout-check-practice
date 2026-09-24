@@ -6,6 +6,40 @@ const supabaseClient = window.supabase.createClient(
   SUPABASE_PUBLISHABLE_KEY
 );
 
+const routineRequestUrlParams =
+  new URLSearchParams(
+    window.location.search
+  );
+
+let shouldRecordRoutineRequest =
+  routineRequestUrlParams.get(
+    "routine-requested"
+  ) === "1";
+
+if (shouldRecordRoutineRequest) {
+  routineRequestUrlParams.delete(
+    "routine-requested"
+  );
+
+  const remainingSearch =
+    routineRequestUrlParams.toString();
+
+  const cleanUrl =
+    window.location.pathname +
+    (
+      remainingSearch
+        ? `?${remainingSearch}`
+        : ""
+    ) +
+    window.location.hash;
+
+  window.history.replaceState(
+    {},
+    "",
+    cleanUrl
+  );
+}
+
 const routineImage = document.querySelector("#routineImage");
 if (
   "serviceWorker" in navigator &&
@@ -3534,6 +3568,12 @@ const signupButton = document.querySelector("#signupButton");
 const signupMessage = document.querySelector("#signupMessage");
 const hideSignupButton = document.querySelector("#hideSignupButton");
 const assignedRoutineName = document.querySelector("#assignedRoutineName");
+
+const routineRequestStatusMessage =
+  document.querySelector(
+    "#routineRequestStatusMessage"
+  );
+
 const routineDescription = document.querySelector("#routineDescription");
 const toggleRoutineDescriptionButton = document.querySelector(
   "#toggleRoutineDescriptionButton"
@@ -6621,6 +6661,59 @@ function renderRoutineDescription(description) {
   toggleRoutineDescriptionButton.textContent = "설명 더 보기";
   toggleRoutineDescriptionButton.setAttribute("aria-expanded", "false");
 }
+
+function getRoutineRequestStorageKey(userId) {
+  return `routineRequestSubmittedAt:${userId}`;
+}
+
+function recordRoutineRequestReturn(userId) {
+  if (!shouldRecordRoutineRequest) {
+    return;
+  }
+
+  localStorage.setItem(
+    getRoutineRequestStorageKey(userId),
+    new Date().toISOString()
+  );
+
+  shouldRecordRoutineRequest = false;
+}
+
+function updateRoutineRequestStatus(
+  userId,
+  assignedAt
+) {
+  const storageKey =
+    getRoutineRequestStorageKey(userId);
+
+  const requestedAt =
+    localStorage.getItem(storageKey);
+
+  if (!requestedAt) {
+    routineRequestStatusMessage.hidden =
+      true;
+
+    return;
+  }
+
+  const hasNewRoutine =
+    assignedAt &&
+    new Date(assignedAt).getTime() >
+    new Date(requestedAt).getTime();
+
+  if (hasNewRoutine) {
+    localStorage.removeItem(storageKey);
+
+    routineRequestStatusMessage.hidden =
+      true;
+
+    return;
+  }
+
+  routineRequestStatusMessage.hidden =
+    false;
+}
+
 // 회원에게 배정된 최신 루틴 불러오기
 async function loadMemberRoutine(userId) {
   const routineElement =
@@ -6631,7 +6724,9 @@ async function loadMemberRoutine(userId) {
 
   const { data, error } = await supabaseClient
     .from("member_routines")
-    .select("routine_name, routine_image_url, routine_image_path, routine_description")
+    .select(
+      "routine_name, routine_image_url, routine_image_path, routine_description, assigned_at"
+    )
     .eq("user_id", userId)
     .eq("is_active", true)
     .order("assigned_at", { ascending: false })
@@ -6639,15 +6734,24 @@ async function loadMemberRoutine(userId) {
     .maybeSingle();
 
   if (error) {
+    updateRoutineRequestStatus(userId, null);
+
     console.error("루틴 불러오기 실패:", error);
     assignedRoutineName.textContent = "루틴을 불러오지 못했습니다.";
     return;
   }
 
   if (!data) {
+    updateRoutineRequestStatus(userId, null);
+
     assignedRoutineName.textContent = "배정된 루틴이 없습니다.";
     return;
   }
+
+  updateRoutineRequestStatus(
+    userId,
+    data.assigned_at
+  );
 
   let imageUrl = data.routine_image_url;
 
@@ -6702,6 +6806,8 @@ async function showWorkoutApp(userId) {
 
   memberInquiryVisibleCount =
     MEMBER_INQUIRY_PAGE_SIZE;
+
+    recordRoutineRequestReturn(userId);
 
   await Promise.all([
     loadMemberRoutine(userId),
