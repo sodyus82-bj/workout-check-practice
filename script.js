@@ -3039,6 +3039,144 @@ async function switchWorkoutCamera() {
 
   await startWorkoutCamera();
 }
+
+// 운동 기록 사진 용량 최적화
+async function optimizeWorkoutPhoto(
+  originalFile
+) {
+  const maximumLength = 1280;
+  const webpQuality = 0.80;
+
+  const sourceUrl =
+    URL.createObjectURL(originalFile);
+
+  try {
+    const sourceImage =
+      await new Promise(
+        function (resolve, reject) {
+          const image = new Image();
+
+          image.onload = function () {
+            resolve(image);
+          };
+
+          image.onerror = function () {
+            reject(
+              new Error(
+                "촬영한 사진을 읽을 수 없습니다."
+              )
+            );
+          };
+
+          image.src = sourceUrl;
+        }
+      );
+
+    const originalWidth =
+      sourceImage.naturalWidth;
+
+    const originalHeight =
+      sourceImage.naturalHeight;
+
+    if (
+      !originalWidth ||
+      !originalHeight
+    ) {
+      throw new Error(
+        "사진 크기를 확인할 수 없습니다."
+      );
+    }
+
+    const resizeRatio = Math.min(
+      1,
+      maximumLength /
+      Math.max(
+        originalWidth,
+        originalHeight
+      )
+    );
+
+    const outputWidth = Math.max(
+      1,
+      Math.round(
+        originalWidth * resizeRatio
+      )
+    );
+
+    const outputHeight = Math.max(
+      1,
+      Math.round(
+        originalHeight * resizeRatio
+      )
+    );
+
+    const canvas =
+      document.createElement("canvas");
+
+    canvas.width = outputWidth;
+    canvas.height = outputHeight;
+
+    const canvasContext =
+      canvas.getContext("2d");
+
+    if (!canvasContext) {
+      throw new Error(
+        "사진 최적화 기능을 사용할 수 없습니다."
+      );
+    }
+
+    canvasContext.imageSmoothingEnabled =
+      true;
+
+    canvasContext.imageSmoothingQuality =
+      "high";
+
+    canvasContext.drawImage(
+      sourceImage,
+      0,
+      0,
+      outputWidth,
+      outputHeight
+    );
+
+    const optimizedBlob =
+      await new Promise(
+        function (resolve) {
+          canvas.toBlob(
+            resolve,
+            "image/webp",
+            webpQuality
+          );
+        }
+      );
+
+    if (!optimizedBlob) {
+      throw new Error(
+        "사진을 WebP 형식으로 변환하지 못했습니다."
+      );
+    }
+
+    console.log(
+      "운동 기록 사진 최적화:",
+      {
+        originalKB: Math.round(
+          originalFile.size / 1024
+        ),
+        optimizedKB: Math.round(
+          optimizedBlob.size / 1024
+        ),
+        outputSize:
+          `${outputWidth}×${outputHeight}`
+      }
+    );
+
+    return optimizedBlob;
+
+  } finally {
+    URL.revokeObjectURL(sourceUrl);
+  }
+}
+
 // 현재 카메라 화면 촬영
 async function captureWorkoutPhoto() {
   const sourceWidth = workoutCameraVideo.videoWidth;
@@ -3055,7 +3193,7 @@ async function captureWorkoutPhoto() {
   captureWorkoutPhotoButton.disabled = true;
 
   try {
-    const maximumSize = 1600;
+    const maximumSize = 1280;
 
     const imageScale = Math.min(
       1,
@@ -3096,8 +3234,8 @@ async function captureWorkoutPhoto() {
     const photoBlob = await new Promise((resolve) => {
       workoutCameraCanvas.toBlob(
         resolve,
-        "image/jpeg",
-        0.82
+        "image/webp",
+        0.80
       );
     });
 
@@ -3207,7 +3345,7 @@ async function saveWorkoutRecord() {
           capturedWorkoutPhotoBlob,
           {
             contentType: photoMimeType,
-            cacheControl: "3600",
+            cacheControl: "31536000",
             upsert: false
           }
         );
@@ -3288,7 +3426,7 @@ openWorkoutCameraButton.addEventListener(
 
 workoutNativeCameraInput.addEventListener(
   "change",
-  function () {
+  async function () {
     const capturedFile =
       workoutNativeCameraInput.files[0];
 
@@ -3297,33 +3435,62 @@ workoutNativeCameraInput.addEventListener(
       return;
     }
 
-    clearCapturedWorkoutPhoto();
-    stopWorkoutCamera();
+    const capturedAt = new Date();
 
-    capturedWorkoutPhotoBlob = capturedFile;
-    workoutPhotoTakenAt = new Date();
-    workoutPhotoPreviewUrl =
-      URL.createObjectURL(capturedFile);
+    try {
+      const optimizedPhotoBlob =
+        await optimizeWorkoutPhoto(
+          capturedFile
+        );
 
-    workoutPhotoPreview.src =
-      workoutPhotoPreviewUrl;
+      clearCapturedWorkoutPhoto();
+      stopWorkoutCamera();
 
-    workoutPhotoDate.textContent =
-      new Intl.DateTimeFormat("ko-KR", {
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-        hour: "2-digit",
-        minute: "2-digit"
-      }).format(workoutPhotoTakenAt);
+      capturedWorkoutPhotoBlob =
+        optimizedPhotoBlob;
 
-    workoutCameraModal.hidden = false;
-    workoutCameraView.hidden = true;
-    workoutPhotoComposer.hidden = false;
+      workoutPhotoTakenAt =
+        capturedAt;
 
-    document.body.classList.add("camera-open");
+      workoutPhotoPreviewUrl =
+        URL.createObjectURL(
+          optimizedPhotoBlob
+        );
 
-    workoutPhotoCaption.focus();
+      workoutPhotoPreview.src =
+        workoutPhotoPreviewUrl;
+
+      workoutPhotoDate.textContent =
+        new Intl.DateTimeFormat("ko-KR", {
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+          hour: "2-digit",
+          minute: "2-digit"
+        }).format(workoutPhotoTakenAt);
+
+      workoutCameraModal.hidden = false;
+      workoutCameraView.hidden = true;
+      workoutPhotoComposer.hidden = false;
+
+      document.body.classList.add(
+        "camera-open"
+      );
+
+      workoutPhotoCaption.focus();
+
+    } catch (photoError) {
+      console.error(
+        "운동 기록 사진 최적화 실패:",
+        photoError
+      );
+
+      workoutNativeCameraInput.value = "";
+
+      window.alert(
+        "촬영한 사진을 준비하지 못했습니다. 다시 촬영해 주세요."
+      );
+    }
   }
 );
 
