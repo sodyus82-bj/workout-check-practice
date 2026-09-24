@@ -17,7 +17,8 @@ let shouldRecordRoutineRequest =
   ) === "1";
 
 
-const routineImage = document.querySelector("#routineImage");
+  const routineCarousel =
+  document.querySelector("#routineCarousel");
 if (
   "serviceWorker" in navigator &&
   window.location.protocol !== "file:"
@@ -4069,6 +4070,145 @@ const adminRoutineDescription = document.querySelector("#adminRoutineDescription
 const saveAdminRoutineButton = document.querySelector("#saveAdminRoutineButton");
 const adminSaveMessage = document.querySelector("#adminSaveMessage");
 
+// 관리자 루틴 이미지 편집 상태
+const MAX_ROUTINE_IMAGES = 5;
+
+let adminRoutineImageItems = [];
+let isAdminRoutineSaving = false;
+let isAdminRoutineRequestSelecting = false;
+
+// 선택한 이미지의 임시 주소와 편집 목록 정리
+function clearAdminRoutineImageItems() {
+  adminRoutineImageItems.forEach(function (item) {
+    if (item.file && item.previewUrl) {
+      URL.revokeObjectURL(item.previewUrl);
+    }
+  });
+
+  adminRoutineImageItems = [];
+  renderAdminRoutineImageItems();
+}
+
+// 이미지별 미리보기·캡션·순서 변경 버튼 표시
+function renderAdminRoutineImageItems() {
+  adminRoutinePreview.replaceChildren();
+
+  adminRoutinePreview.hidden =
+    adminRoutineImageItems.length === 0;
+
+  adminRoutineImage.disabled =
+    isAdminRoutineSaving ||
+    adminRoutineImageItems.length >= MAX_ROUTINE_IMAGES;
+
+  adminRoutineImageItems.forEach(function (item, index) {
+    const imageItem = document.createElement("div");
+    imageItem.className = "admin-routine-image-item";
+
+    const imageTitle = document.createElement("strong");
+    imageTitle.textContent = `이미지 ${index + 1}`;
+
+    const previewImage = document.createElement("img");
+    previewImage.alt = `루틴 이미지 ${index + 1} 미리보기`;
+    previewImage.draggable = false;
+
+    if (item.previewUrl) {
+      previewImage.src = item.previewUrl;
+    } else {
+      previewImage.hidden = true;
+    }
+
+    const captionLabel = document.createElement("label");
+    captionLabel.htmlFor = `adminRoutineCaption${index}`;
+    captionLabel.textContent = "이미지 캡션 (선택)";
+
+    const captionInput = document.createElement("textarea");
+    captionInput.id = `adminRoutineCaption${index}`;
+    captionInput.className = "admin-routine-image-caption";
+    captionInput.rows = 2;
+    captionInput.placeholder =
+      "이 이미지 아래에 표시할 짧은 글을 입력하세요.";
+    captionInput.value = item.caption || "";
+    captionInput.disabled = isAdminRoutineSaving;
+
+    captionInput.addEventListener("input", function () {
+      item.caption = captionInput.value;
+    });
+
+    const actionArea = document.createElement("div");
+    actionArea.className = "admin-routine-image-actions";
+
+    function createMoveButton(buttonText, offset) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.textContent = buttonText;
+
+      const targetIndex = index + offset;
+
+      button.disabled =
+        isAdminRoutineSaving ||
+        targetIndex < 0 ||
+        targetIndex >= adminRoutineImageItems.length;
+
+      button.addEventListener("click", function () {
+        if (isAdminRoutineSaving) {
+          return;
+        }
+
+        const movedItem = adminRoutineImageItems[index];
+
+        adminRoutineImageItems[index] =
+          adminRoutineImageItems[targetIndex];
+
+        adminRoutineImageItems[targetIndex] = movedItem;
+
+        renderAdminRoutineImageItems();
+      });
+
+      return button;
+    }
+
+    const previousButton = createMoveButton("앞으로", -1);
+    const nextButton = createMoveButton("뒤로", 1);
+
+    const deleteButton = document.createElement("button");
+    deleteButton.type = "button";
+    deleteButton.className = "is-delete";
+    deleteButton.textContent = "삭제";
+    deleteButton.disabled = isAdminRoutineSaving;
+
+    deleteButton.addEventListener("click", function () {
+      if (isAdminRoutineSaving) {
+        return;
+      }
+
+      const removedItem =
+        adminRoutineImageItems.splice(index, 1)[0];
+
+      if (removedItem.file && removedItem.previewUrl) {
+        URL.revokeObjectURL(removedItem.previewUrl);
+      }
+
+      renderAdminRoutineImageItems();
+    });
+
+    actionArea.append(
+      previousButton,
+      nextButton,
+      deleteButton
+    );
+
+    imageItem.append(
+      imageTitle,
+      previewImage,
+      captionLabel,
+      captionInput,
+      actionArea
+    );
+
+    adminRoutinePreview.append(imageItem);
+  });
+}
+
 // 관리자 센터 소식 작성 요소
 const adminCommunityEditorTitle =
   document.querySelector(
@@ -7211,162 +7351,585 @@ function updateRoutineRequestStatus(
     false;
 }
 
+// 회원 루틴 캐러셀 상태
+let memberRoutineCarouselState = null;
+let memberRoutineLoadRequestId = 0;
+let memberRoutineDisplayedUserId = null;
+let memberRoutineDisplayedId = null;
+
+function getRoutineImageKey(item) {
+  return item.image_path
+    ? `path:${item.image_path}`
+    : `url:${item.image_url}`;
+}
+
+// 기존 캐러셀 정리
+function resetMemberRoutineCarousel() {
+  memberRoutineCarouselState?.dispose();
+
+  memberRoutineCarouselState = null;
+  memberRoutineDisplayedUserId = null;
+  memberRoutineDisplayedId = null;
+
+  routineCarousel.replaceChildren();
+  routineCarousel.hidden = true;
+}
+
+// 회원 루틴 이미지·캡션 캐러셀 표시
+function renderMemberRoutineCarousel(
+  imageItems,
+  routineName,
+  preservePosition = false
+) {
+  if (imageItems.length === 0) {
+    resetMemberRoutineCarousel();
+    return;
+  }
+
+  const keys = imageItems.map(getRoutineImageKey);
+  const previous = memberRoutineCarouselState;
+
+  const sameImages =
+    previous &&
+    previous.keys.length === keys.length &&
+    previous.keys.every(
+      (key, index) => key === keys[index]
+    );
+
+  // 이미지가 같으면 기존 요소를 유지하고 캡션만 갱신
+  if (sameImages) {
+    previous.items = imageItems;
+
+    previous.slides.forEach(function (slide, index) {
+      const caption = slide.querySelector("figcaption");
+      const text = imageItems[index].caption || "";
+
+      if (caption.textContent !== text) {
+        caption.textContent = text;
+      }
+
+      caption.hidden = !text;
+
+      slide.querySelector("img").alt =
+        `${routineName} 이미지 ${index + 1}`;
+    });
+
+    routineCarousel.hidden = false;
+
+    if (!preservePosition) {
+      previous.moveTo(0, false);
+    }
+
+    previous.scheduleLayout();
+    return;
+  }
+
+  const previousKey =
+    preservePosition && previous
+      ? previous.keys[previous.index]
+      : null;
+
+  const initialIndex = Math.max(
+    0,
+    keys.indexOf(previousKey)
+  );
+
+  previous?.dispose();
+
+  const track = document.createElement("div");
+  track.className = "routine-carousel-track";
+
+  track.classList.toggle(
+    "has-multiple-images",
+    imageItems.length > 1
+  );
+
+  track.tabIndex = imageItems.length > 1 ? 0 : -1;
+
+  track.setAttribute(
+    "aria-label",
+    "루틴 이미지, 좌우 방향키로 이동"
+  );
+
+  const controls = document.createElement("div");
+  controls.className = "routine-carousel-controls";
+  controls.hidden = imageItems.length <= 1;
+
+  function makeArrow(text, label) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "routine-carousel-button";
+    button.textContent = text;
+    button.setAttribute("aria-label", label);
+    return button;
+  }
+
+  const previousButton =
+    makeArrow("‹", "이전 루틴 이미지");
+
+  const nextButton =
+    makeArrow("›", "다음 루틴 이미지");
+
+  const dotArea = document.createElement("div");
+  dotArea.className = "routine-carousel-dots";
+
+  const dots = [];
+  const slides = [];
+
+  let frame = 0;
+  let resizeObserver;
+
+  const state = {
+    keys,
+    items: imageItems,
+    slides,
+    index: initialIndex,
+    width: 0,
+    moveTo,
+    scheduleLayout,
+    dispose() {
+      resizeObserver?.disconnect();
+      cancelAnimationFrame(frame);
+    }
+  };
+
+  // 현재 이미지와 캡션의 높이에 맞추기
+  function scheduleLayout() {
+    cancelAnimationFrame(frame);
+
+    frame = requestAnimationFrame(function () {
+      if (memberRoutineCarouselState !== state) {
+        return;
+      }
+
+      const width = track.clientWidth;
+
+      if (!width) {
+        return;
+      }
+
+      if (state.width !== width) {
+        state.width = width;
+
+        track.scrollTo({
+          left: width * state.index,
+          behavior: "instant"
+        });
+      }
+
+      const height =
+        slides[state.index].getBoundingClientRect().height;
+
+      if (height > 0) {
+        track.style.height = `${Math.ceil(height)}px`;
+      }
+    });
+  }
+
+  function updateControls(index) {
+    state.index = Math.max(
+      0,
+      Math.min(index, imageItems.length - 1)
+    );
+
+    previousButton.disabled = state.index === 0;
+
+    nextButton.disabled =
+      state.index === imageItems.length - 1;
+
+    dots.forEach(function (dot, dotIndex) {
+      const active = dotIndex === state.index;
+
+      dot.classList.toggle("is-active", active);
+      dot.setAttribute("aria-current", String(active));
+    });
+
+    scheduleLayout();
+  }
+
+  function moveTo(index, smooth = true) {
+    updateControls(index);
+
+    const reduced = window.matchMedia(
+      "(prefers-reduced-motion: reduce)"
+    ).matches;
+
+    track.scrollTo({
+      left: track.clientWidth * state.index,
+      behavior: smooth && !reduced ? "smooth" : "instant"
+    });
+  }
+
+  imageItems.forEach(function (item, index) {
+    const slide = document.createElement("figure");
+    slide.className = "routine-carousel-slide";
+
+    const img =
+      item.imageElement || document.createElement("img");
+
+    img.alt = `${routineName} 이미지 ${index + 1}`;
+    img.draggable = false;
+    img.addEventListener("load", scheduleLayout);
+
+    if (!item.imageElement) {
+      img.src = item.previewUrl;
+    }
+
+    const caption = document.createElement("figcaption");
+    caption.className = "routine-carousel-caption";
+    caption.textContent = item.caption || "";
+    caption.hidden = !item.caption;
+
+    slide.append(img, caption);
+    slides.push(slide);
+    track.append(slide);
+
+    const dot = document.createElement("button");
+    dot.type = "button";
+    dot.className = "routine-carousel-dot";
+
+    dot.setAttribute(
+      "aria-label",
+      `${index + 1}번 루틴 이미지 보기`
+    );
+
+    dot.addEventListener("click", function () {
+      moveTo(index);
+    });
+
+    dots.push(dot);
+    dotArea.append(dot);
+  });
+
+  previousButton.addEventListener("click", function () {
+    moveTo(state.index - 1);
+  });
+
+  nextButton.addEventListener("click", function () {
+    moveTo(state.index + 1);
+  });
+
+  // 모바일 스와이프에 맞춰 위치 표시 갱신
+  track.addEventListener(
+    "scroll",
+    function () {
+      if (!track.clientWidth) {
+        return;
+      }
+
+      if (track.clientWidth !== state.width) {
+        scheduleLayout();
+        return;
+      }
+
+      updateControls(
+        Math.round(track.scrollLeft / track.clientWidth)
+      );
+    },
+    { passive: true }
+  );
+
+  // 키보드로 이미지 이동
+  track.addEventListener("keydown", function (event) {
+    const targets = {
+      ArrowLeft: state.index - 1,
+      ArrowRight: state.index + 1,
+      Home: 0,
+      End: imageItems.length - 1
+    };
+
+    if (!(event.key in targets)) {
+      return;
+    }
+
+    event.preventDefault();
+    moveTo(targets[event.key]);
+  });
+
+  // PC 마우스 드래그
+  let drag = null;
+
+  track.addEventListener("pointerdown", function (event) {
+    if (
+      imageItems.length <= 1 ||
+      event.pointerType !== "mouse" ||
+      event.button !== 0 ||
+      event.target.closest("figcaption")
+    ) {
+      return;
+    }
+
+    event.preventDefault();
+
+    drag = {
+      id: event.pointerId,
+      x: event.clientX,
+      left: track.scrollLeft
+    };
+
+    track.classList.add("is-dragging");
+    track.setPointerCapture(event.pointerId);
+  });
+
+  track.addEventListener("pointermove", function (event) {
+    if (!drag || event.pointerId !== drag.id) {
+      return;
+    }
+
+    track.scrollLeft =
+      drag.left - (event.clientX - drag.x);
+  });
+
+  function finishDrag() {
+    if (!drag) {
+      return;
+    }
+
+    const pointerId = drag.id;
+    drag = null;
+
+    if (track.hasPointerCapture(pointerId)) {
+      track.releasePointerCapture(pointerId);
+    }
+
+    track.classList.remove("is-dragging");
+
+    if (track.clientWidth) {
+      moveTo(
+        Math.round(track.scrollLeft / track.clientWidth)
+      );
+    }
+  }
+
+  track.addEventListener("pointerup", finishDrag);
+  track.addEventListener("pointercancel", finishDrag);
+  track.addEventListener("lostpointercapture", finishDrag);
+
+  controls.append(previousButton, dotArea, nextButton);
+
+  memberRoutineCarouselState = state;
+
+  routineCarousel.replaceChildren(track, controls);
+  routineCarousel.hidden = false;
+
+  resizeObserver = new ResizeObserver(scheduleLayout);
+
+  slides.forEach(function (slide) {
+    resizeObserver.observe(slide);
+  });
+
+  updateControls(initialIndex);
+}
+
+// 루틴 이미지를 화면에 표시하기 전에 준비
+function preloadMemberRoutineImage(item) {
+  return new Promise(function (resolve, reject) {
+    const imageElement = new Image();
+
+    const timer = setTimeout(function () {
+      finish(
+        new Error("루틴 이미지 로딩 시간이 초과되었습니다.")
+      );
+    }, 30000);
+
+    function finish(error) {
+      clearTimeout(timer);
+
+      imageElement.onload = null;
+      imageElement.onerror = null;
+
+      if (error) {
+        reject(error);
+      } else {
+        resolve({
+          ...item,
+          imageElement
+        });
+      }
+    }
+
+    imageElement.onload = function () {
+      finish();
+    };
+
+    imageElement.onerror = function () {
+      finish(
+        new Error("루틴 이미지를 불러오지 못했습니다.")
+      );
+    };
+
+    imageElement.src = item.previewUrl;
+  });
+}
+
 // 회원에게 배정된 최신 루틴 불러오기
 async function loadMemberRoutine(
   userId,
   preserveCurrentRoutine = false
 ) {
-  const routineElement =
-    routineImage.closest(".routine-image");
+  const requestId = ++memberRoutineLoadRequestId;
 
-  if (!preserveCurrentRoutine) {
-    routineElement.hidden = true;
-    routineDescription.hidden = true;
-  }
+  const keepCurrent =
+    preserveCurrentRoutine &&
+    memberRoutineDisplayedUserId === userId;
 
-  const { data, error } = await supabaseClient
-    .from("member_routines")
-    .select(
-      "routine_name, routine_image_url, routine_image_path, routine_description, assigned_at"
-    )
-    .eq("user_id", userId)
-    .eq("is_active", true)
-    .order("assigned_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  if (error) {
-    console.error(
-      "루틴 불러오기 실패:",
-      error
+  function isCurrentRequest() {
+    return (
+      requestId === memberRoutineLoadRequestId &&
+      !appScreen.hidden
     );
-
-    if (!preserveCurrentRoutine) {
-      updateRoutineRequestStatus(
-        userId,
-        null
-      );
-
-      assignedRoutineName.textContent =
-        "루틴을 불러오지 못했습니다.";
-    }
-
-    return;
   }
 
-  if (!data) {
-    updateRoutineRequestStatus(userId, null);
+  if (!keepCurrent) {
+    resetMemberRoutineCarousel();
 
-    assignedRoutineName.textContent = "배정된 루틴이 없습니다.";
-    return;
+    routineDescription.replaceChildren();
+    routineDescription.hidden = true;
+
+    delete routineDescription.dataset.sourceText;
+
+    toggleRoutineDescriptionButton.hidden = true;
+
+    assignedRoutineName.textContent =
+      "불러오는 중...";
   }
 
-  updateRoutineRequestStatus(
-    userId,
-    data.assigned_at
-  );
+  try {
+    const { data, error } = await supabaseClient
+      .from("member_routines")
+      .select(
+        `
+          id,
+          routine_name,
+          routine_image_url,
+          routine_image_path,
+          routine_images,
+          routine_description,
+          assigned_at
+        `
+      )
+      .eq("user_id", userId)
+      .eq("is_active", true)
+      .order("assigned_at", {
+        ascending: false
+      })
+      .limit(1)
+      .maybeSingle();
 
-  let imageUrl = data.routine_image_url;
-
-  if (data.routine_image_path) {
-    const { data: signedUrlData, error: signedUrlError } =
-      await supabaseClient.storage
-        .from("routine-images")
-        .createSignedUrl(data.routine_image_path, 60 * 60);
-
-    if (signedUrlError) {
-      console.error("루틴 이미지 주소 생성 실패:", signedUrlError);
-      assignedRoutineName.textContent = "루틴 이미지를 불러오지 못했습니다.";
+    if (!isCurrentRequest()) {
       return;
     }
 
-    imageUrl = signedUrlData.signedUrl;
-  }
-
-  if (!imageUrl) {
-    if (!preserveCurrentRoutine) {
-      assignedRoutineName.textContent =
-        "루틴 이미지가 없습니다.";
+    if (error) {
+      throw error;
     }
 
-    return;
-  }
+    if (!data) {
+      resetMemberRoutineCarousel();
 
-  const imageIdentity =
-    data.routine_image_path ||
-    data.routine_image_url ||
-    imageUrl;
+      renderRoutineDescription("");
 
-  const shouldReplaceRoutineImage =
-    !preserveCurrentRoutine ||
-    routineImage.dataset.imageIdentity !==
-    imageIdentity;
+      routineDescription.dataset.sourceText = "";
 
-  if (
-    preserveCurrentRoutine &&
-    shouldReplaceRoutineImage
-  ) {
-    const isNewImageReady =
-      await new Promise(function (resolve) {
-        const preloadImage =
-          new Image();
+      assignedRoutineName.textContent =
+        "배정된 루틴이 없습니다.";
 
-        preloadImage.addEventListener(
-          "load",
-          function () {
-            resolve(true);
-          },
-          { once: true }
+      updateRoutineRequestStatus(userId, null);
+
+      return;
+    }
+
+    const entries = getRoutineImageEntries(data);
+    const previous = memberRoutineCarouselState;
+
+    const sameImages =
+      keepCurrent &&
+      previous &&
+      previous.keys.length === entries.length &&
+      previous.keys.every(function (key, index) {
+        return (
+          key === getRoutineImageKey(entries[index])
         );
-
-        preloadImage.addEventListener(
-          "error",
-          function () {
-            resolve(false);
-          },
-          { once: true }
-        );
-
-        preloadImage.src = imageUrl;
       });
 
-    if (!isNewImageReady) {
-      console.error(
-        "새 루틴 이미지 미리 불러오기 실패"
+    let imageItems;
+
+    if (sameImages) {
+      // 이미지가 같으면 기존 이미지를 유지하고 캡션만 반영
+      imageItems = entries.map(function (entry, index) {
+        return {
+          ...previous.items[index],
+          ...entry
+        };
+      });
+    } else {
+      const resolvedItems =
+        await resolveRoutineImageItems(data);
+
+      if (!isCurrentRequest()) {
+        return;
+      }
+
+      // 새 이미지가 준비될 때까지 기존 화면 유지
+      imageItems = await Promise.all(
+        resolvedItems.map(preloadMemberRoutineImage)
       );
 
-      return;
+      if (!isCurrentRequest()) {
+        return;
+      }
     }
-  }
 
-  assignedRoutineName.textContent =
-    data.routine_name;
+    const sameRoutine =
+      keepCurrent &&
+      memberRoutineDisplayedId === data.id;
 
-  const nextRoutineDescription =
-    data.routine_description || "";
+    const description =
+      data.routine_description || "";
 
-  if (
-    !preserveCurrentRoutine ||
-    routineDescription.dataset.sourceText !==
-    nextRoutineDescription
-  ) {
-    renderRoutineDescription(
-      data.routine_description
+    renderMemberRoutineCarousel(
+      imageItems,
+      data.routine_name,
+      sameRoutine
     );
 
-    routineDescription.dataset.sourceText =
-      nextRoutineDescription;
+    assignedRoutineName.textContent =
+      data.routine_name;
+
+    // 이미지 캡션과 별개인 기존 설명·링크 영역
+    if (
+      !sameRoutine ||
+      routineDescription.dataset.sourceText !==
+        description
+    ) {
+      renderRoutineDescription(description);
+
+      routineDescription.dataset.sourceText =
+        description;
+    }
+
+    memberRoutineDisplayedUserId = userId;
+    memberRoutineDisplayedId = data.id;
+
+    updateRoutineRequestStatus(
+      userId,
+      data.assigned_at
+    );
+  } catch (error) {
+    if (!isCurrentRequest()) {
+      return;
+    }
+
+    console.error("루틴 불러오기 실패:", error);
+
+    // 자동 갱신 실패 시에는 기존 화면 유지
+    if (!keepCurrent) {
+      assignedRoutineName.textContent =
+        "루틴을 불러오지 못했습니다.";
+
+      updateRoutineRequestStatus(userId, null);
+    }
   }
-
-  if (shouldReplaceRoutineImage) {
-    routineImage.src = imageUrl;
-
-    routineImage.dataset.imageIdentity =
-      imageIdentity;
-  }
-
-  routineImage.alt = data.routine_name;
-  routineElement.hidden = false;
 }
 
 // 일반 회원 화면 표시
@@ -7539,10 +8102,21 @@ function renderAdminRoutineRequests(
     selectMemberButton.textContent =
       "루틴 배정하기";
 
-    selectMemberButton.addEventListener(
-      "click",
-      async function () {
-        selectMemberButton.disabled = true;
+      selectMemberButton.addEventListener(
+        "click",
+        async function () {
+          if (isAdminRoutineSaving) {
+            adminRoutineRequestListMessage.textContent =
+              "루틴 저장 중입니다. 저장 완료 후 선택해 주세요.";
+            return;
+          }
+  
+          if (isAdminRoutineRequestSelecting) {
+            return;
+          }
+  
+          isAdminRoutineRequestSelecting = true;
+          selectMemberButton.disabled = true;
 
         try {
           // 새로 가입한 회원도 선택할 수 있도록 갱신
@@ -7600,9 +8174,10 @@ function renderAdminRoutineRequests(
           adminRoutineRequestListMessage.textContent =
             "회원 정보를 불러오지 못했습니다. 다시 시도해 주세요.";
 
-        } finally {
-          selectMemberButton.disabled = false;
-        }
+          } finally {
+            isAdminRoutineRequestSelecting = false;
+            selectMemberButton.disabled = false;
+          }
       }
     );
 
@@ -7925,8 +8500,105 @@ async function showScreenForCurrentUser() {
   await showWorkoutApp(user.id);
 }
 
+// 기존 단일 이미지와 새 이미지 목록을 같은 형태로 정리
+function getRoutineImageEntries(routine) {
+  if (!routine) {
+    return [];
+  }
+
+  let sourceImages = [];
+
+  if (
+    Array.isArray(routine.routine_images) &&
+    routine.routine_images.length > 0
+  ) {
+    sourceImages = routine.routine_images;
+  } else if (
+    routine.routine_image_path ||
+    routine.routine_image_url
+  ) {
+    sourceImages = [
+      {
+        image_path: routine.routine_image_path || "",
+        image_url: routine.routine_image_url || "",
+        caption: ""
+      }
+    ];
+  }
+
+  if (sourceImages.length > MAX_ROUTINE_IMAGES) {
+    throw new Error("루틴 이미지는 최대 5장까지 사용할 수 있습니다.");
+  }
+
+  return sourceImages.map(function (image) {
+    const imagePath =
+      typeof image?.image_path === "string"
+        ? image.image_path
+        : "";
+
+    const imageUrl =
+      typeof image?.image_url === "string"
+        ? image.image_url
+        : "";
+
+    if (!imagePath && !imageUrl) {
+      throw new Error("루틴 이미지의 저장 주소를 확인할 수 없습니다.");
+    }
+
+    return {
+      image_path: imagePath,
+      image_url: imageUrl,
+      caption:
+        typeof image.caption === "string"
+          ? image.caption
+          : ""
+    };
+  });
+}
+
+// 저장된 루틴 이미지의 표시 주소 준비
+async function resolveRoutineImageItems(routine) {
+  const entries = getRoutineImageEntries(routine);
+
+  return Promise.all(
+    entries.map(async function (entry) {
+      let previewUrl = entry.image_url;
+
+      if (entry.image_path) {
+        const {
+          data: signedImageData,
+          error: signedImageError
+        } = await supabaseClient.storage
+          .from("routine-images")
+          .createSignedUrl(
+            entry.image_path,
+            60 * 60
+          );
+
+        if (signedImageError) {
+          throw signedImageError;
+        }
+
+        if (!signedImageData?.signedUrl) {
+          throw new Error("루틴 이미지 주소를 만들지 못했습니다.");
+        }
+
+        previewUrl = signedImageData.signedUrl;
+      }
+
+      return {
+        ...entry,
+        previewUrl,
+        file: null
+      };
+    })
+  );
+}
+
 // 관리자 루틴 입력창 모드 표시
 function renderAdminRoutineEditor() {
+  clearAdminRoutineImageItems();
+
   adminRoutineImage.value = "";
   adminSaveMessage.textContent = "";
 
@@ -7940,6 +8612,16 @@ function renderAdminRoutineEditor() {
     adminRoutineDescription.value =
       currentAdminRoutine.routine_description || "";
 
+    adminRoutineImageItems =
+      (currentAdminRoutine.imageItems || []).map(
+        function (item) {
+          return {
+            ...item,
+            file: null
+          };
+        }
+      );
+
     adminRoutineModeMessage.textContent =
       "현재 배정된 최신 루틴을 수정하고 있습니다.";
 
@@ -7948,34 +8630,25 @@ function renderAdminRoutineEditor() {
       "새 루틴 배정하기";
 
     adminRoutineImageHelp.textContent =
-      "새 이미지를 선택하지 않으면 기존 이미지가 유지됩니다.";
+      "기존 이미지를 포함해 최대 5장까지 사용할 수 있습니다. " +
+      "캡션과 이미지 순서도 수정할 수 있습니다.";
 
     saveAdminRoutineButton.textContent =
       "수정 내용 저장";
 
-    if (currentAdminRoutine.signedImageUrl) {
-      adminRoutinePreview.src =
-        currentAdminRoutine.signedImageUrl;
-
-      adminRoutinePreview.hidden = false;
-    } else {
-      adminRoutinePreview.hidden = true;
-      adminRoutinePreview.removeAttribute("src");
-    }
-
+    renderAdminRoutineImageItems();
     return;
   }
 
   adminRoutineName.value = "";
   adminRoutineDescription.value = "";
-  adminRoutinePreview.hidden = true;
-  adminRoutinePreview.removeAttribute("src");
 
   saveAdminRoutineButton.textContent =
     "새 루틴 배정";
 
   adminRoutineImageHelp.textContent =
-    "새로 배정할 루틴 이미지를 선택해 주세요.";
+    "루틴 이미지를 최대 5장까지 추가해 주세요. " +
+    "각 이미지에 캡션을 입력할 수 있습니다.";
 
   if (currentAdminRoutine) {
     adminRoutineModeMessage.textContent =
@@ -8009,27 +8682,39 @@ toggleAdminRoutineModeButton.addEventListener(
   }
 );
 
+// 회원 선택 변경 시 이전 불러오기 결과 구분
+let adminRoutineLoadRequestId = 0;
+
 // 관리자 화면에서 회원을 선택했을 때
 async function loadSelectedAdminMemberRoutine() {
+  const requestId = ++adminRoutineLoadRequestId;
   const userId = adminMemberSelect.value;
 
   const selectedOption =
     adminMemberSelect.options[
-    adminMemberSelect.selectedIndex
+      adminMemberSelect.selectedIndex
     ];
+
+  function isCurrentSelection() {
+    return (
+      requestId === adminRoutineLoadRequestId &&
+      adminMemberSelect.value === userId &&
+      !adminScreen.hidden
+    );
+  }
 
   currentAdminRoutine = null;
   adminRoutineMode = "new";
+
+  clearAdminRoutineImageItems();
 
   adminRoutineName.value = "";
   adminRoutineImage.value = "";
   adminRoutineDescription.value = "";
 
-  adminRoutinePreview.hidden = true;
-  adminRoutinePreview.removeAttribute("src");
-
   adminSaveMessage.textContent = "";
   toggleAdminRoutineModeButton.hidden = true;
+  saveAdminRoutineButton.disabled = true;
 
   if (!userId) {
     adminRoutineEditor.hidden = true;
@@ -8041,127 +8726,108 @@ async function loadSelectedAdminMemberRoutine() {
   }
 
   adminRoutineEditor.hidden = false;
-  saveAdminRoutineButton.disabled = true;
 
   adminRoutineModeMessage.textContent =
     "회원의 최신 루틴을 불러오고 있습니다.";
 
   const memberName =
-    selectedOption.dataset.memberName ||
-    "이름 없음";
+    selectedOption?.dataset.memberName || "이름 없음";
 
   const email =
-    selectedOption.dataset.email || "";
+    selectedOption?.dataset.email || "";
 
   const emailText =
     email ? ` (${email})` : "";
 
   const assignmentCount =
-    selectedOption.dataset.assignmentCount || "0";
+    selectedOption?.dataset.assignmentCount || "0";
 
-  adminMemberInfo.textContent =
+  const memberSummary =
     `${memberName}${emailText} · ` +
     `총 ${assignmentCount}회 배정`;
 
-  const selectedUserId = userId;
+  adminMemberInfo.textContent = memberSummary;
 
-  const {
-    data: latestRoutine,
-    error: latestRoutineError
-  } = await supabaseClient
-    .from("member_routines")
-    .select(
-      "id, routine_name, routine_image_path, routine_description, assigned_at"
-    )
-    .eq("user_id", userId)
-    .eq("is_active", true)
-    .order("assigned_at", {
-      ascending: false
-    })
-    .limit(1)
-    .maybeSingle();
+  try {
+    const {
+      data: latestRoutine,
+      error: latestRoutineError
+    } = await supabaseClient
+      .from("member_routines")
+      .select(
+        "id, routine_name, routine_image_path, " +
+        "routine_image_url, routine_images, " +
+        "routine_description, assigned_at"
+      )
+      .eq("user_id", userId)
+      .eq("is_active", true)
+      .order("assigned_at", {
+        ascending: false
+      })
+      .limit(1)
+      .maybeSingle();
 
-  // 불러오는 동안 다른 회원을 선택한 경우 중단
-  if (
-    adminMemberSelect.value !== selectedUserId
-  ) {
-    return;
-  }
+    if (!isCurrentSelection()) {
+      return;
+    }
 
-  if (latestRoutineError) {
+    if (latestRoutineError) {
+      throw latestRoutineError;
+    }
+
+    if (!latestRoutine) {
+      adminMemberInfo.textContent =
+        `${memberSummary} · 현재 루틴 없음`;
+
+      renderAdminRoutineEditor();
+
+      saveAdminRoutineButton.disabled =
+        isAdminRoutineSaving;
+
+      return;
+    }
+
+    const imageItems =
+      await resolveRoutineImageItems(latestRoutine);
+
+    if (!isCurrentSelection()) {
+      return;
+    }
+
+    currentAdminRoutine = {
+      ...latestRoutine,
+      imageItems
+    };
+
+    adminRoutineMode = "edit";
+
+    adminMemberInfo.textContent =
+      `${memberSummary} · ` +
+      `현재 루틴: ${latestRoutine.routine_name}`;
+
+    renderAdminRoutineEditor();
+
+    saveAdminRoutineButton.disabled =
+      isAdminRoutineSaving;
+  } catch (loadError) {
+    if (!isCurrentSelection()) {
+      return;
+    }
+
     console.error(
       "회원 최신 루틴 불러오기 실패:",
-      latestRoutineError
+      loadError
     );
 
     adminRoutineModeMessage.textContent =
       "최신 루틴을 불러오지 못했습니다.";
 
     adminSaveMessage.textContent =
-      `불러오기 실패: ${latestRoutineError.message}`;
+      "회원을 다시 선택해 주세요. " +
+      (loadError.message || "");
 
-    return;
+    saveAdminRoutineButton.disabled = true;
   }
-
-  if (!latestRoutine) {
-    adminMemberInfo.textContent =
-      `${memberName}${emailText} · ` +
-      `총 ${assignmentCount}회 배정 · 현재 루틴 없음`;
-
-    currentAdminRoutine = null;
-    adminRoutineMode = "new";
-
-    renderAdminRoutineEditor();
-    saveAdminRoutineButton.disabled = false;
-
-    return;
-  }
-
-  let signedImageUrl = "";
-
-  if (latestRoutine.routine_image_path) {
-    const {
-      data: signedImageData,
-      error: signedImageError
-    } = await supabaseClient.storage
-      .from("routine-images")
-      .createSignedUrl(
-        latestRoutine.routine_image_path,
-        3600
-      );
-
-    // 이미지 처리 중 다른 회원을 선택한 경우 중단
-    if (
-      adminMemberSelect.value !== selectedUserId
-    ) {
-      return;
-    }
-
-    if (signedImageError) {
-      console.error(
-        "현재 루틴 이미지 불러오기 실패:",
-        signedImageError
-      );
-    } else {
-      signedImageUrl =
-        signedImageData.signedUrl;
-    }
-  }
-
-  currentAdminRoutine = {
-    ...latestRoutine,
-    signedImageUrl
-  };
-
-  adminRoutineMode = "edit";
-
-  adminMemberInfo.textContent =
-    `${memberName}${emailText} · ` +
-    `총 ${assignmentCount}회 배정 · ` +
-    `현재 루틴: ${latestRoutine.routine_name}`;
-
-  renderAdminRoutineEditor();
-  saveAdminRoutineButton.disabled = false;
 }
 
 adminMemberSelect.addEventListener(
@@ -8169,319 +8835,407 @@ adminMemberSelect.addEventListener(
   loadSelectedAdminMemberRoutine
 );
 
+// 선택한 루틴 이미지를 편집 목록에 추가
 adminRoutineImage.addEventListener(
   "change",
   function () {
-    const selectedFile =
-      adminRoutineImage.files[0];
+    const selectedFiles = Array.from(
+      adminRoutineImage.files || []
+    );
 
-    if (!selectedFile) {
-      if (
-        adminRoutineMode === "edit" &&
-        currentAdminRoutine &&
-        currentAdminRoutine.signedImageUrl
-      ) {
-        adminRoutinePreview.src =
-          currentAdminRoutine.signedImageUrl;
+    // 같은 파일도 다시 선택할 수 있도록 초기화
+    adminRoutineImage.value = "";
 
-        adminRoutinePreview.hidden = false;
-      } else {
-        adminRoutinePreview.hidden = true;
-        adminRoutinePreview.removeAttribute("src");
-      }
+    if (
+      isAdminRoutineSaving ||
+      saveAdminRoutineButton.disabled ||
+      selectedFiles.length === 0
+    ) {
+      return;
+    }
+
+    adminSaveMessage.textContent = "";
+
+    const totalCount =
+      adminRoutineImageItems.length +
+      selectedFiles.length;
+
+    if (totalCount > MAX_ROUTINE_IMAGES) {
+      const remainingCount =
+        MAX_ROUTINE_IMAGES -
+        adminRoutineImageItems.length;
+
+      adminSaveMessage.textContent =
+        `이미지는 최대 5장까지 사용할 수 있습니다. ` +
+        `현재 ${remainingCount}장을 더 추가할 수 있습니다.`;
 
       return;
     }
 
-    adminRoutinePreview.src =
-      URL.createObjectURL(selectedFile);
+    const allowedTypes = [
+      "image/png",
+      "image/jpeg",
+      "image/webp"
+    ];
 
-    adminRoutinePreview.hidden = false;
+    for (const file of selectedFiles) {
+      if (!allowedTypes.includes(file.type)) {
+        adminSaveMessage.textContent =
+          "PNG, JPG, WebP 이미지 파일만 추가할 수 있습니다.";
+
+        return;
+      }
+
+      if (file.size > 10 * 1024 * 1024) {
+        adminSaveMessage.textContent =
+          "이미지는 한 장당 10MB 이하로 선택해 주세요.";
+
+        return;
+      }
+    }
+
+    selectedFiles.forEach(function (file) {
+      adminRoutineImageItems.push({
+        image_path: "",
+        image_url: "",
+        caption: "",
+        previewUrl: URL.createObjectURL(file),
+        file
+      });
+    });
+
+    renderAdminRoutineImageItems();
+
+    adminSaveMessage.textContent =
+      `이미지 ${selectedFiles.length}장을 추가했습니다. ` +
+      `현재 총 ${adminRoutineImageItems.length}장입니다.`;
   }
 );
 
+// 루틴 이미지·캡션·설명을 함께 저장
 saveAdminRoutineButton.addEventListener(
   "click",
   async function () {
+    if (isAdminRoutineRequestSelecting) {
+      adminSaveMessage.textContent =
+        "회원 정보를 불러오는 중입니다. 잠시 후 저장해 주세요.";
+      return;
+    }
+
+    if (
+      isAdminRoutineSaving ||
+      saveAdminRoutineButton.disabled
+    ) {
+      return;
+    }
+
     const userId = adminMemberSelect.value;
-
-    const routineName =
-      adminRoutineName.value.trim();
-
-    const description =
-      adminRoutineDescription.value.trim();
-
-    const selectedFile =
-      adminRoutineImage.files[0];
+    const routineName = adminRoutineName.value.trim();
+    const description = adminRoutineDescription.value.trim();
 
     const isEditMode =
       adminRoutineMode === "edit" &&
       Boolean(currentAdminRoutine);
 
-    const existingImagePath =
-      isEditMode
-        ? currentAdminRoutine.routine_image_path || ""
-        : "";
+    const routineId =
+      isEditMode ? currentAdminRoutine.id : null;
+
+    // 저장을 시작한 시점의 이미지와 캡션 사용
+    const items = adminRoutineImageItems.map(function (item) {
+      return { ...item };
+    });
 
     if (!userId) {
       adminSaveMessage.textContent =
         "먼저 회원을 선택해 주세요.";
-
       return;
     }
 
     if (!routineName) {
       adminSaveMessage.textContent =
         "루틴 이름을 입력해 주세요.";
-
       adminRoutineName.focus();
       return;
     }
 
-    // 새 루틴은 이미지가 반드시 필요하고,
-    // 수정할 때는 기존 이미지를 그대로 사용할 수 있습니다.
     if (
-      !selectedFile &&
-      !existingImagePath
+      items.length === 0 ||
+      items.length > MAX_ROUTINE_IMAGES
     ) {
       adminSaveMessage.textContent =
-        "루틴 이미지를 선택해 주세요.";
-
+        "루틴 이미지는 1장부터 최대 5장까지 등록해 주세요.";
       return;
     }
 
-    if (
-      selectedFile &&
-      !selectedFile.type.startsWith("image/")
-    ) {
-      adminSaveMessage.textContent =
-        "이미지 파일만 선택할 수 있습니다.";
+    const extensions = {
+      "image/png": "png",
+      "image/jpeg": "jpg",
+      "image/webp": "webp"
+    };
 
-      return;
+    for (const item of items) {
+      if (item.file) {
+        if (
+          !extensions[item.file.type] ||
+          item.file.size > 10 * 1024 * 1024
+        ) {
+          adminSaveMessage.textContent =
+            "이미지는 한 장당 10MB 이하의 PNG, JPG, WebP 파일이어야 합니다.";
+          return;
+        }
+      } else if (!item.image_path && !item.image_url) {
+        adminSaveMessage.textContent =
+          "이미지 정보를 확인할 수 없습니다. 회원을 다시 선택해 주세요.";
+        return;
+      }
     }
 
-    if (
-      selectedFile &&
-      selectedFile.size > 10 * 1024 * 1024
-    ) {
-      adminSaveMessage.textContent =
-        "이미지 파일은 10MB 이하만 올릴 수 있습니다.";
+    const previousPaths = isEditMode
+      ? (currentAdminRoutine.imageItems || [])
+          .map(function (item) {
+            return item.image_path;
+          })
+          .filter(Boolean)
+      : [];
 
-      return;
-    }
+    const lockedControls = [
+      adminMemberSelect,
+      adminMemberSearch,
+      adminRoutineName,
+      adminRoutineDescription,
+      toggleAdminRoutineModeButton,
+      adminLogoutButton,
+      refreshAdminAppButton
+    ];
 
+    const previousDisabledStates =
+      lockedControls.map(function (control) {
+        return control.disabled;
+      });
+
+    isAdminRoutineSaving = true;
     saveAdminRoutineButton.disabled = true;
-    toggleAdminRoutineModeButton.disabled = true;
 
-    let uploadedImagePath = "";
+    lockedControls.forEach(function (control) {
+      control.disabled = true;
+    });
+
+    renderAdminRoutineImageItems();
+
+    const uploadedPaths = [];
+    let databaseWriteStarted = false;
     let databaseSaved = false;
+    let needsReload = false;
+    let cleanupFailed = false;
 
     try {
-      let imagePath = existingImagePath;
+      const savedImages = [];
 
-      // 새 이미지가 선택된 경우에만 업로드
-      if (selectedFile) {
-        adminSaveMessage.textContent =
-          "루틴 이미지를 저장 중입니다...";
+      for (let index = 0; index < items.length; index += 1) {
+        const item = items[index];
 
-        const safeFileName =
-          selectedFile.name.replace(
-            /[^a-zA-Z0-9._-]/g,
-            "_"
-          );
+        let imagePath = item.image_path || "";
+        let imageUrl = item.image_url || "";
 
-        uploadedImagePath =
-          `${userId}/${Date.now()}-${safeFileName}`;
-
-        const { error: uploadError } =
-          await supabaseClient.storage
-            .from("routine-images")
-            .upload(
-              uploadedImagePath,
-              selectedFile,
-              {
-                cacheControl: "3600",
-                upsert: false
-              }
-            );
-
-        if (uploadError) {
-          console.error(
-            "이미지 업로드 실패:",
-            uploadError
-          );
-
+        if (item.file) {
           adminSaveMessage.textContent =
-            `이미지 저장 실패: ${uploadError.message}`;
+            `루틴 이미지 저장 중… ${index + 1}/${items.length}`;
 
-          return;
-        }
+          const extension = extensions[item.file.type];
 
-        imagePath = uploadedImagePath;
-      }
+          imagePath =
+            `${userId}/${crypto.randomUUID()}.${extension}`;
 
-      let successMessage = "";
+          // 업로드 도중 실패한 경우에도 정리할 수 있도록 기록
+          uploadedPaths.push(imagePath);
 
-      if (isEditMode) {
-        adminSaveMessage.textContent =
-          "루틴 수정 내용을 저장하고 있습니다...";
-
-        const { error: updateError } =
-          await supabaseClient
-            .from("member_routines")
-            .update({
-              routine_name: routineName,
-              routine_image_url: "",
-              routine_image_path: imagePath,
-              routine_description: description
-            })
-            .eq("id", currentAdminRoutine.id)
-            .eq("user_id", userId)
-            .select("id")
-            .single();
-
-        if (updateError) {
-          console.error(
-            "루틴 수정 실패:",
-            updateError
-          );
-
-          // 수정에 실패하면 새로 올린 이미지만 정리
-          if (uploadedImagePath) {
-            const { error: cleanupError } =
-              await supabaseClient.storage
-                .from("routine-images")
-                .remove([uploadedImagePath]);
-
-            if (cleanupError) {
-              console.error(
-                "수정 실패 이미지 정리 실패:",
-                cleanupError
-              );
-            }
-          }
-
-          adminSaveMessage.textContent =
-            `수정 실패: ${updateError.message}`;
-
-          return;
-        }
-
-        databaseSaved = true;
-
-        // 새 이미지로 교체한 경우에만 기존 이미지 삭제
-        if (
-          uploadedImagePath &&
-          existingImagePath &&
-          uploadedImagePath !== existingImagePath
-        ) {
-          const { error: oldImageDeleteError } =
+          const { error: uploadError } =
             await supabaseClient.storage
               .from("routine-images")
-              .remove([existingImagePath]);
+              .upload(imagePath, item.file, {
+                cacheControl: "3600",
+                contentType: item.file.type,
+                upsert: false
+              });
 
-          if (oldImageDeleteError) {
-            console.error(
-              "기존 루틴 이미지 삭제 실패:",
-              oldImageDeleteError
-            );
+          if (uploadError) {
+            throw uploadError;
           }
+
+          imageUrl = "";
         }
 
-        successMessage =
-          "최신 루틴의 수정 내용을 저장했습니다.";
-      } else {
-        adminSaveMessage.textContent =
-          "새 루틴을 배정하고 있습니다...";
+        savedImages.push({
+          image_path: imagePath,
+          image_url: imagePath ? "" : imageUrl,
+          caption: (item.caption || "").trim()
+        });
+      }
 
-        const { error: insertError } =
-          await supabaseClient
+      const firstImage = savedImages[0];
+
+      const routineValues = {
+        routine_name: routineName,
+        routine_images: savedImages,
+
+        // 기존 화면과의 호환을 위해 첫 이미지도 기록
+        routine_image_path: firstImage.image_path,
+        routine_image_url: firstImage.image_url,
+
+        // 공통 설명과 링크는 별도 저장
+        routine_description: description
+      };
+
+      adminSaveMessage.textContent =
+        "루틴 내용을 저장하고 있습니다…";
+
+      databaseWriteStarted = true;
+
+      const saveQuery = isEditMode
+        ? supabaseClient
+            .from("member_routines")
+            .update(routineValues)
+            .eq("id", routineId)
+            .eq("user_id", userId)
+        : supabaseClient
             .from("member_routines")
             .insert({
+              ...routineValues,
               user_id: userId,
-              routine_name: routineName,
-              routine_image_url: "",
-              routine_image_path: imagePath,
-              routine_description: description,
               is_active: true
             });
 
-        if (insertError) {
-          console.error(
-            "새 루틴 배정 실패:",
-            insertError
-          );
+      const {
+        data: savedRoutine,
+        error: saveError
+      } = await saveQuery
+        .select("id")
+        .single();
 
-          // 데이터 저장에 실패하면 업로드한 이미지 정리
-          if (uploadedImagePath) {
+      if (saveError) {
+        throw saveError;
+      }
+
+      if (!savedRoutine) {
+        throw new Error("루틴 저장 결과를 확인하지 못했습니다.");
+      }
+
+      databaseSaved = true;
+
+      // 수정 저장에 성공한 뒤, 목록에서 빠진 기존 이미지 정리
+      if (isEditMode) {
+        const retainedPaths = new Set(
+          savedImages.map(function (image) {
+            return image.image_path;
+          })
+        );
+
+        const removedPaths = [
+          ...new Set(previousPaths)
+        ].filter(function (path) {
+          return !retainedPaths.has(path);
+        });
+
+        if (removedPaths.length > 0) {
+          try {
             const { error: cleanupError } =
               await supabaseClient.storage
                 .from("routine-images")
-                .remove([uploadedImagePath]);
+                .remove(removedPaths);
 
             if (cleanupError) {
-              console.error(
-                "배정 실패 이미지 정리 실패:",
-                cleanupError
-              );
+              throw cleanupError;
             }
+          } catch (cleanupError) {
+            cleanupFailed = true;
+
+            console.error(
+              "기존 루틴 이미지 정리 실패:",
+              cleanupError
+            );
           }
-
-          adminSaveMessage.textContent =
-            `배정 실패: ${insertError.message}`;
-
-          return;
         }
-
-        databaseSaved = true;
-
-        successMessage =
-          "새 루틴을 배정했습니다.";
       }
 
-      adminRoutineImage.value = "";
       adminMemberSearch.value = "";
 
-      // 회원 목록의 배정 횟수와 최신 루틴 갱신
       await loadAdminMembers();
 
       adminMemberSelect.value = userId;
 
-      // 저장된 최신 루틴을 입력창에 다시 표시
+      if (adminMemberSelect.value !== userId) {
+        throw new Error("저장 후 회원 목록을 다시 불러오지 못했습니다.");
+      }
+
       await loadSelectedAdminMemberRoutine();
 
-      adminSaveMessage.textContent =
-        successMessage;
-    } catch (unexpectedError) {
-      console.error(
-        "루틴 저장 중 예상하지 못한 오류:",
-        unexpectedError
-      );
+      if (!currentAdminRoutine) {
+        throw new Error("저장된 루틴을 다시 불러오지 못했습니다.");
+      }
 
-      // DB 저장 전에 오류가 난 경우 업로드 이미지를 정리
+      adminSaveMessage.textContent = isEditMode
+        ? "루틴 이미지와 캡션, 설명을 수정했습니다."
+        : "새 루틴을 배정했습니다.";
+
+      if (cleanupFailed) {
+        adminSaveMessage.textContent +=
+          " 일부 이전 이미지 파일은 정리하지 못했습니다.";
+      }
+    } catch (saveError) {
+      console.error("루틴 저장 처리 오류:", saveError);
+
+      // DB 저장을 시도하기 전 실패했다면 새 업로드만 정리
       if (
-        uploadedImagePath &&
-        !databaseSaved
+        !databaseWriteStarted &&
+        uploadedPaths.length > 0
       ) {
-        const { error: cleanupError } =
-          await supabaseClient.storage
-            .from("routine-images")
-            .remove([uploadedImagePath]);
+        try {
+          const { error: cleanupError } =
+            await supabaseClient.storage
+              .from("routine-images")
+              .remove(uploadedPaths);
 
-        if (cleanupError) {
+          if (cleanupError) {
+            throw cleanupError;
+          }
+        } catch (cleanupError) {
           console.error(
-            "예상하지 못한 오류 후 이미지 정리 실패:",
+            "실패한 루틴 업로드 정리 오류:",
             cleanupError
           );
         }
       }
 
-      adminSaveMessage.textContent =
-        "작업 중 오류가 발생했습니다. " +
-        "화면을 새로고침하여 저장 결과를 확인해 주세요.";
+      if (databaseSaved) {
+        needsReload = true;
+
+        adminSaveMessage.textContent =
+          "루틴은 저장됐지만 화면을 다시 불러오지 못했습니다. " +
+          "회원을 다시 선택해 저장된 내용을 확인해 주세요.";
+      } else if (databaseWriteStarted) {
+        needsReload = true;
+
+        adminSaveMessage.textContent =
+          "루틴 저장 완료를 확인하지 못했습니다. " +
+          "중복 배정을 피하려면 회원을 다시 선택해 결과를 확인해 주세요. " +
+          (saveError.message || "");
+      } else {
+        adminSaveMessage.textContent =
+          "이미지 업로드를 완료하지 못했습니다. " +
+          "선택한 내용은 유지되어 있으니 다시 저장해 주세요. " +
+          (saveError.message || "");
+      }
     } finally {
-      saveAdminRoutineButton.disabled = false;
-      toggleAdminRoutineModeButton.disabled = false;
+      isAdminRoutineSaving = false;
+
+      lockedControls.forEach(function (control, index) {
+        control.disabled = previousDisabledStates[index];
+      });
+
+      renderAdminRoutineImageItems();
+
+      saveAdminRoutineButton.disabled =
+        needsReload || !adminMemberSelect.value;
     }
   }
 );
@@ -8574,16 +9328,28 @@ async function handleLogout() {
       return;
     }
 
-    await Promise.all([
-      stopInquiryRealtimeSubscription(),
-      stopMemberRoutineRealtimeSubscription(),
-      stopAdminRoutineRequestSubscription()
-    ]);
+    // 진행 중이던 루틴 조회 결과가 나중에 반영되지 않도록 취소
+    memberRoutineLoadRequestId += 1;
+    adminRoutineLoadRequestId += 1;
 
     // 회원·관리자 화면을 숨기고 로그인 화면 표시
     appScreen.hidden = true;
     adminScreen.hidden = true;
     loginScreen.hidden = false;
+
+    // 회원 루틴 이미지와 설명 초기화
+    resetMemberRoutineCarousel();
+
+    assignedRoutineName.textContent = "불러오는 중...";
+
+    renderRoutineDescription("");
+    delete routineDescription.dataset.sourceText;
+
+    await Promise.all([
+      stopInquiryRealtimeSubscription(),
+      stopMemberRoutineRealtimeSubscription(),
+      stopAdminRoutineRequestSubscription()
+    ]);
 
     // 회원가입 화면이 열려 있었다면 기본 로그인 화면으로 복구
     signupForm.hidden = true;
@@ -8615,8 +9381,14 @@ async function handleLogout() {
     adminRoutineImage.value = "";
     adminRoutineDescription.value = "";
 
-    adminRoutinePreview.hidden = true;
-    adminRoutinePreview.removeAttribute("src");
+    // 관리자 이미지 목록과 임시 미리보기 주소 정리
+    clearAdminRoutineImageItems();
+
+    currentAdminRoutine = null;
+    adminRoutineMode = "new";
+
+    adminRoutineModeMessage.textContent = "";
+    toggleAdminRoutineModeButton.hidden = true;
 
     adminSaveMessage.textContent = "";
     saveAdminRoutineButton.disabled = false;

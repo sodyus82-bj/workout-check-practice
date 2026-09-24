@@ -465,16 +465,73 @@ body {
   border-radius: 10px;
 }
 
+/* 관리자 루틴 이미지 목록 */
 #adminRoutinePreview {
-  display: block;
-  box-sizing: border-box;
+  display: grid;
+  gap: 12px;
   width: 100%;
-  max-height: 320px;
+  min-width: 0;
   margin-top: 6px;
-  object-fit: contain;
-  border: 1px solid var(--brand-border);
-  border-radius: 10px;
+}
+
+/* 이미지별 편집 영역 */
+.admin-routine-image-item {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  padding: 12px;
   background-color: #f8fafc;
+  border: 1px solid var(--brand-border);
+  border-radius: 12px;
+}
+
+.admin-routine-image-item strong {
+  color: var(--brand-navy);
+  font-size: 13px;
+}
+
+.admin-routine-image-item img {
+  display: block;
+  width: 100%;
+  max-height: 220px;
+  object-fit: contain;
+}
+
+/* 이미지별 캡션 입력칸 */
+.admin-card .admin-routine-image-caption {
+  min-height: 64px;
+  padding: 9px 10px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+/* 순서 변경·삭제 버튼 */
+.admin-routine-image-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.admin-routine-image-actions button {
+  min-width: 0;
+  padding: 8px 4px;
+  color: var(--brand-navy);
+  background-color: #ffffff;
+  border: 1px solid var(--brand-border);
+  border-radius: 8px;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.admin-routine-image-actions button.is-delete {
+  color: #d63b2d;
+  border-color: #efb5ad;
+}
+
+.admin-routine-image-actions button:disabled {
+  opacity: 0.4;
+  cursor: default;
 }
 
 #saveAdminRoutineButton {
@@ -3061,4 +3118,148 @@ body.camera-open {
 
 .community-menu-button:disabled::after {
   background-color: transparent;
+}
+
+/* 회원 루틴 캐러셀 */
+.routine-carousel {
+  width: 100%;
+  min-width: 0;
+  margin: 0 0 16px;
+}
+
+/* 좌우로 넘기는 이미지·캡션 영역 */
+.routine-carousel-track {
+  display: flex;
+  align-items: flex-start;
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x mandatory;
+  scroll-behavior: smooth;
+  scrollbar-width: none;
+  overscroll-behavior-x: contain;
+}
+
+.routine-carousel-track::-webkit-scrollbar {
+  display: none;
+}
+
+.routine-carousel-track.has-multiple-images {
+  cursor: grab;
+}
+
+.routine-carousel-track.is-dragging {
+  cursor: grabbing;
+  scroll-behavior: auto;
+  scroll-snap-type: none;
+  user-select: none;
+}
+
+/* 이미지 한 장과 해당 캡션 */
+.routine-carousel-slide {
+  box-sizing: border-box;
+  flex: 0 0 100%;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+}
+
+.routine-carousel-slide img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 0;
+  box-shadow: none;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+/* 이미지 바로 아래의 작은 캡션 */
+.routine-carousel-caption {
+  margin: 8px 2px 0;
+  color: #667085;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* 이전·다음 버튼과 위치 표시 */
+.routine-carousel-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 10px 0 0;
+}
+
+.routine-carousel-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 36px;
+  height: 32px;
+  margin: 0;
+  padding: 0;
+  color: var(--brand-navy);
+  background-color: transparent;
+  border: 1px solid var(--brand-border);
+  border-radius: 50%;
+  font: inherit;
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.routine-carousel-button:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.routine-carousel-dots {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.routine-carousel-dot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 28px;
+  margin: 0;
+  padding: 0;
+  background-color: transparent;
+  border: 0;
+  cursor: pointer;
+}
+
+.routine-carousel-dot::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background-color: #c7ced9;
+}
+
+.routine-carousel-dot.is-active::before {
+  width: 22px;
+  background-color: var(--brand-orange);
+}
+
+.routine-carousel-button:focus-visible,
+.routine-carousel-dot:focus-visible {
+  outline: 2px solid var(--brand-orange);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .routine-carousel-track {
+    scroll-behavior: auto;
+  }
 }
