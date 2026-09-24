@@ -5272,10 +5272,37 @@ async function moveAdminCommunityPost(
       throw targetUpdateError;
     }
 
-    await loadAdminCommunityPosts();
+    const scrollLeft = window.scrollX;
+    const scrollTop = window.scrollY;
+    const listHeight =
+      adminCommunityPostList.getBoundingClientRect().height;
+
+    loadedAdminCommunityPosts[postIndex] = {
+      ...targetPost,
+      display_order: currentOrder
+    };
+
+    loadedAdminCommunityPosts[targetIndex] = {
+      ...currentPost,
+      display_order: targetOrder
+    };
+
+    renderAdminCommunityPostList(
+      loadedAdminCommunityPosts
+    );
+
+    // 순서 변경으로 목록 높이가 줄어드는 것 방지
+    adminCommunityPostList.style.minHeight =
+      `${Math.ceil(listHeight)}px`;
 
     adminCommunityListMessage.textContent =
       "소식 순서를 변경했습니다.";
+
+    window.scrollTo({
+      left: scrollLeft,
+      top: scrollTop,
+      behavior: "instant"
+    });
 
   } catch (moveError) {
     console.error(
@@ -5323,6 +5350,7 @@ async function moveAdminCommunityPost(
 function renderAdminCommunityPostList(
   posts
 ) {
+  adminCommunityPostList.style.minHeight = "";
   adminCommunityPostList.innerHTML = "";
   loadMoreAdminCommunityPostsButton.hidden =
     true;

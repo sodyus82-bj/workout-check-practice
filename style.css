@@ -1828,10 +1828,16 @@ body.camera-open {
 .admin-community-post-list {
   display: grid;
   gap: 12px;
+  overflow-anchor: none;
+}
+
+#adminCommunityListMessage {
+  min-height: 21px;
 }
 
 #adminCommunityListMessage:empty {
-  display: none;
+  display: block;
+  visibility: hidden;
 }
 
 /* 관리할 소식 한 개 */
