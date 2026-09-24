@@ -2274,6 +2274,11 @@ body.camera-open {
   border-top: 1px solid #dbe2ec;
 }
 
+.member-inquiry-message-list {
+  display: grid;
+  gap: 10px;
+}
+
 .member-inquiry-thread[hidden] {
   display: none !important;
 }
@@ -2470,6 +2475,100 @@ body.camera-open {
   line-height: 1.5;
 }
 
+.admin-inquiry-filters {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 16px 0;
+}
+
+.admin-inquiry-filter-button {
+  min-height: 44px;
+  padding: 9px 6px;
+  border: 1px solid #d8dee9;
+  border-radius: 12px;
+  background-color: #ffffff;
+  color: #667085;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.admin-inquiry-filter-button.is-active {
+  border-color: #ff6b00;
+  background-color: #fff3e8;
+  color: #e85f00;
+}
+
+.admin-inquiry-load-more-button {
+  width: 100%;
+  min-height: 48px;
+  margin-top: 14px;
+  border: 1px solid #ff6b00;
+  border-radius: 14px;
+  background-color: #ffffff;
+  color: #e85f00;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.admin-inquiry-load-more-button:hover {
+  background-color: #fff7f1;
+}
+
+.admin-inquiry-load-more-button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.admin-inquiry-load-more-button[hidden] {
+  display: none;
+}
+
+.admin-inquiry-archive-area {
+  display: grid;
+  gap: 8px;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.admin-inquiry-archive-button {
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 14px;
+  border: 1px solid #b8c0cc;
+  border-radius: 12px;
+  background-color: #ffffff;
+  color: #344054;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.admin-inquiry-archive-button:hover {
+  background-color: #f8fafc;
+}
+
+.admin-inquiry-archive-button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.admin-inquiry-archive-message {
+  min-height: 20px;
+  margin: 0;
+  color: #c2410c;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.admin-inquiry-reply-area[hidden] {
+  display: none;
+}
+
 .admin-inquiry-list {
   display: grid;
   gap: 12px;
@@ -2631,4 +2730,121 @@ body.camera-open {
   color: #c74600;
   font-size: 13px;
   line-height: 1.5;
+}
+
+/* 회원 문의 내역 더 보기 */
+.member-inquiry-load-more-button {
+  width: 100%;
+  min-height: 48px;
+  margin-top: 14px;
+  border: 1px solid #ff6b00;
+  border-radius: 14px;
+  background: #ffffff;
+  color: #e85f00;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.member-inquiry-load-more-button:hover {
+  background: #fff7f1;
+}
+
+.member-inquiry-load-more-button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.member-inquiry-load-more-button[hidden] {
+  display: none;
+}
+
+/* 회원 문의 삭제 */
+.member-inquiry-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.member-inquiry-summary-button {
+  grid-column: 1 / -1;
+  grid-row: 1;
+}
+
+.member-inquiry-thread {
+  grid-column: 1 / -1;
+  grid-row: 2;
+}
+
+.member-inquiry-delete-area {
+  grid-column: 2;
+  grid-row: 1;
+  align-self: end;
+  justify-self: end;
+  z-index: 1;
+  padding: 0 14px 12px 0;
+}
+
+.member-inquiry-delete-button {
+  border: 1px solid #ef9a8c;
+  background-color: #fff8f6;
+  box-shadow: 0 1px 3px rgba(180, 35, 24, 0.12);
+  color: #c2412d;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.member-inquiry-delete-button:active {
+  background-color: #fde9e5;
+  box-shadow: none;
+  transform: translateY(1px);
+}
+
+.member-inquiry-delete-button:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+
+.member-inquiry-delete-message {
+  margin: 0;
+  color: #b42318;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.member-inquiry-delete-message:empty {
+  display: none;
+}
+
+/* 관리자 문의 카드 우측 하단 보관 버튼 */
+.admin-inquiry-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.admin-inquiry-summary-button {
+  grid-column: 1 / -1;
+  grid-row: 1;
+}
+
+.admin-inquiry-thread {
+  grid-column: 1 / -1;
+  grid-row: 2;
+}
+
+.admin-inquiry-meta {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  padding-right: 120px;
+  box-sizing: border-box;
+}
+
+.admin-inquiry-meta-date,
+.admin-inquiry-meta-contact {
+  display: block;
+}
+
+.admin-inquiry-meta-contact {
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
