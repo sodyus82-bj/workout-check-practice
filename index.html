@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Nanum+Pen+Script&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="style.css?v=32">
+  <link rel="stylesheet" href="style.css?v=33">
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#ec6a1a">
 
@@ -60,7 +60,12 @@
         <input id="signupPhoneLast4" type="text" inputmode="numeric" autocomplete="off" maxlength="4" pattern="[0-9]{4}"
           placeholder="숫자 4자리" required>
         <label for="signupEmail">이메일</label>
-        <input id="signupEmail" type="email" autocomplete="email" required>
+        <input id="signupEmail" type="email" autocomplete="email"
+  aria-describedby="signupEmailHelp" required>
+
+<p id="signupEmailHelp" class="signup-email-help">
+  비밀번호 분실 시 새 비밀번호를 받기 위해 메일주소가 필요합니다.
+</p>
 
         <label for="signupPassword">비밀번호</label>
 
@@ -594,7 +599,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-  <script src="script.js?v=32"></script>
+  <script src="script.js?v=33"></script>
 </body>
 
 

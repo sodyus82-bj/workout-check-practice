@@ -8625,20 +8625,61 @@ signupForm.addEventListener("submit", async function (event) {
   }
 });
 document.querySelectorAll("[data-password-toggle]").forEach((button) => {
+  const passwordInput = document.querySelector(
+    `#${button.dataset.passwordToggle}`
+  );
+
+  if (!passwordInput) {
+    return;
+  }
+
+  // 입력 중 아이콘을 눌러도 입력창의 포커스 유지
+  button.addEventListener("pointerdown", function (event) {
+    if (document.activeElement === passwordInput) {
+      event.preventDefault();
+    }
+  });
+
   button.addEventListener("click", function () {
-    const passwordInput = document.querySelector(
-      `#${button.dataset.passwordToggle}`
-    );
+    // 현재 커서 위치와 선택 범위 저장
+    const selectionStart =
+      passwordInput.selectionStart ?? passwordInput.value.length;
 
-    const isHidden = passwordInput.type === "password";
+    const selectionEnd =
+      passwordInput.selectionEnd ?? passwordInput.value.length;
 
-    passwordInput.type = isHidden ? "text" : "password";
-    button.textContent = isHidden ? "🙈" : "👁";
+    const selectionDirection =
+      passwordInput.selectionDirection || "none";
+
+    const isHidden =
+      passwordInput.type === "password";
+
+    passwordInput.type =
+      isHidden ? "text" : "password";
+
+    button.textContent =
+      isHidden ? "🙈" : "👁";
+
     button.setAttribute(
       "aria-label",
       isHidden ? "비밀번호 숨기기" : "비밀번호 보기"
     );
-    button.setAttribute("aria-pressed", String(isHidden));
+
+    button.setAttribute(
+      "aria-pressed",
+      String(isHidden)
+    );
+
+    // 입력창으로 포커스를 유지하고 커서 위치 복원
+    passwordInput.focus({
+      preventScroll: true
+    });
+
+    passwordInput.setSelectionRange(
+      selectionStart,
+      selectionEnd,
+      selectionDirection
+    );
   });
 });
 initializeLogin();
