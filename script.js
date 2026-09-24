@@ -3567,6 +3567,27 @@ refreshMemberAppButton.addEventListener(
   }
 );
 
+const refreshAdminAppButton =
+  document.querySelector(
+    "#refreshAdminAppButton"
+  );
+
+refreshAdminAppButton.addEventListener(
+  "click",
+  function () {
+    refreshAdminAppButton.disabled = true;
+
+    refreshAdminAppButton
+      .lastElementChild
+      .textContent =
+      "갱신 중...";
+
+    setTimeout(function () {
+      window.location.reload();
+    }, 150);
+  }
+);
+
 const adminMemberSearch = document.querySelector("#adminMemberSearch");
 const adminMemberSelect = document.querySelector("#adminMemberSelect");
 const adminMemberInfo = document.querySelector("#adminMemberInfo");

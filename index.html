@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Nanum+Pen+Script&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="style.css?v=26">
+  <link rel="stylesheet" href="style.css?v=27">
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#ec6a1a">
 
@@ -278,7 +278,16 @@
   </main>
 
   <main id="adminScreen" class="app admin-screen" hidden>
-    <img class="screen-logo screen-logo-top" src="images/center-logo.png" alt="헬스와 필라테스 화곡점">
+    <div class="member-app-topbar admin-app-topbar">
+      <span class="member-app-topbar-spacer" aria-hidden="true"></span>
+    
+      <img class="screen-logo screen-logo-top" src="images/center-logo.png" alt="헬스와 필라테스 화곡점">
+    
+      <button id="refreshAdminAppButton" class="member-refresh-button" type="button" aria-label="관리자 화면 새로고침">
+        <span aria-hidden="true">↻</span>
+        <span>새로고침</span>
+      </button>
+    </div>
     <header class="header">
       <p class="label">관리자 페이지</p>
       <h1>센터 운영 관리</h1>
@@ -552,7 +561,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-  <script src="script.js?v=26"></script>
+  <script src="script.js?v=27"></script>
 </body>
 
 

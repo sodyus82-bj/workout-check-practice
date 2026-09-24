@@ -1872,18 +1872,19 @@ body.camera-open {
 /* 수정·삭제 버튼 영역 */
 .admin-community-manage-actions {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 4px;
 }
 
 .admin-community-edit-button,
 .admin-community-delete-button {
   width: 100%;
-  padding: 10px 12px;
+  padding: 5px 3px;
   background-color: var(--brand-white);
-  border-radius: 9px;
+  border-radius: 6px;
   font: inherit;
-  font-size: 13px;
+  font-size: 11px;
+  line-height: 1.2;
   font-weight: bold;
   cursor: pointer;
 }
@@ -2053,13 +2054,14 @@ body.camera-open {
 /* 관리자 센터 소식 순서 변경 버튼 */
 .admin-community-order-button {
   width: 100%;
-  padding: 10px 12px;
+  padding: 5px 3px;
   color: #5f6b7c;
   background-color: #f5f7fa;
   border: 1px solid #cbd3df;
-  border-radius: 9px;
+  border-radius: 6px;
   font: inherit;
-  font-size: 13px;
+  font-size: 11px;
+  line-height: 1.2;
   font-weight: bold;
   cursor: pointer;
 }
