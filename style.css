@@ -2863,3 +2863,71 @@ body.camera-open {
   overflow-wrap: anywhere;
   word-break: break-word;
 }
+
+/* 관리자 새 루틴 신청 알림 */
+.admin-routine-request-list {
+  display: grid;
+  gap: 10px;
+}
+
+.admin-routine-request-card {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid #dbe2ec;
+  border-radius: 12px;
+  background-color: #f8f9fb;
+}
+
+.admin-routine-request-content {
+  min-width: 0;
+}
+
+.admin-routine-request-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.admin-routine-request-header strong {
+  color: var(--brand-navy);
+  font-size: 15px;
+  overflow-wrap: anywhere;
+}
+
+.admin-routine-request-badge {
+  padding: 4px 8px;
+  border-radius: 999px;
+  background-color: #fff0df;
+  color: #b84d00;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.admin-routine-request-date,
+.admin-routine-request-contact {
+  margin: 6px 0 0;
+  color: #667085;
+  font-size: 12px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.admin-routine-request-card
+.admin-routine-request-select-button {
+  width: auto;
+  justify-self: end;
+  margin: 0;
+  padding: 6px 10px;
+  border: 1px solid var(--brand-orange);
+  border-radius: 8px;
+  background-color: #fff;
+  color: var(--brand-orange);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.4;
+  cursor: pointer;
+}

@@ -16,29 +16,6 @@ let shouldRecordRoutineRequest =
     "routine-requested"
   ) === "1";
 
-if (shouldRecordRoutineRequest) {
-  routineRequestUrlParams.delete(
-    "routine-requested"
-  );
-
-  const remainingSearch =
-    routineRequestUrlParams.toString();
-
-  const cleanUrl =
-    window.location.pathname +
-    (
-      remainingSearch
-        ? `?${remainingSearch}`
-        : ""
-    ) +
-    window.location.hash;
-
-  window.history.replaceState(
-    {},
-    "",
-    cleanUrl
-  );
-}
 
 const routineImage = document.querySelector("#routineImage");
 if (
@@ -198,6 +175,10 @@ let memberRoutineRealtimeRefreshTimer =
 
 let currentMemberRoutineUserId = null;
 
+let adminRoutineRequestRealtimeChannel = null;
+let adminRoutineRequestRefreshTimer = null;
+let adminRoutineRequestLoadId = 0;
+
 function refreshMemberRoutineWhenVisible() {
   if (
     document.visibilityState !==
@@ -207,6 +188,7 @@ function refreshMemberRoutineWhenVisible() {
   }
 
   scheduleMemberRoutineRealtimeRefresh();
+  scheduleAdminRoutineRequestRefresh();
 }
 
 document.addEventListener(
@@ -550,6 +532,139 @@ async function startMemberRoutineRealtimeSubscription(
           );
         }
       });
+}
+
+// 관리자 루틴 신청 알림 갱신 예약
+function scheduleAdminRoutineRequestRefresh() {
+  if (
+    adminScreen.hidden ||
+    !adminRoutineRequestRealtimeChannel
+  ) {
+    return;
+  }
+
+  if (adminRoutineRequestRefreshTimer) {
+    clearTimeout(
+      adminRoutineRequestRefreshTimer
+    );
+  }
+
+  const currentChannel =
+    adminRoutineRequestRealtimeChannel;
+
+  adminRoutineRequestRefreshTimer =
+    setTimeout(async function () {
+      adminRoutineRequestRefreshTimer = null;
+
+      if (
+        adminScreen.hidden ||
+        currentChannel !==
+          adminRoutineRequestRealtimeChannel
+      ) {
+        return;
+      }
+
+      try {
+        await loadAdminRoutineRequests(true);
+      } catch (refreshError) {
+        console.error(
+          "루틴 신청 알림 갱신 실패:",
+          refreshError
+        );
+      }
+    }, 300);
+}
+
+// 관리자 루틴 신청 실시간 연결 종료
+async function stopAdminRoutineRequestSubscription() {
+  adminRoutineRequestLoadId += 1;
+
+  if (adminRoutineRequestRefreshTimer) {
+    clearTimeout(
+      adminRoutineRequestRefreshTimer
+    );
+
+    adminRoutineRequestRefreshTimer = null;
+  }
+
+  const channelToRemove =
+    adminRoutineRequestRealtimeChannel;
+
+  adminRoutineRequestRealtimeChannel = null;
+
+  if (!channelToRemove) {
+    return;
+  }
+
+  try {
+    await supabaseClient.removeChannel(
+      channelToRemove
+    );
+  } catch (removeError) {
+    console.error(
+      "루틴 신청 실시간 연결 종료 실패:",
+      removeError
+    );
+  }
+}
+
+// 관리자 루틴 신청 실시간 연결 시작
+async function startAdminRoutineRequestSubscription() {
+  await stopAdminRoutineRequestSubscription();
+
+  if (adminScreen.hidden) {
+    return;
+  }
+
+  const channel =
+    supabaseClient.channel(
+      `admin-routine-requests-${Date.now()}`
+    );
+
+  adminRoutineRequestRealtimeChannel =
+    channel;
+
+  channel
+    .on(
+      "postgres_changes",
+      {
+        event: "*",
+        schema: "public",
+        table: "routine_requests"
+      },
+      function () {
+        if (
+          adminRoutineRequestRealtimeChannel !==
+          channel
+        ) {
+          return;
+        }
+
+        scheduleAdminRoutineRequestRefresh();
+      }
+    )
+    .subscribe(function (status) {
+      if (
+        adminRoutineRequestRealtimeChannel !==
+        channel
+      ) {
+        return;
+      }
+
+      if (status === "SUBSCRIBED") {
+        scheduleAdminRoutineRequestRefresh();
+      }
+
+      if (
+        status === "CHANNEL_ERROR" ||
+        status === "TIMED_OUT"
+      ) {
+        console.error(
+          "루틴 신청 실시간 연결 실패:",
+          status
+        );
+      }
+    });
 }
 
 // 회원 문의 기능 온·오프 상태 불러오기
@@ -3935,6 +4050,16 @@ const loadMoreAdminCommunityPostsButton =
     "#loadMoreAdminCommunityPostsButton"
   );
 
+  const adminRoutineRequestListMessage =
+  document.querySelector(
+    "#adminRoutineRequestListMessage"
+  );
+
+const adminRoutineRequestList =
+  document.querySelector(
+    "#adminRoutineRequestList"
+  );
+
 // 관리자 1:1 문의 관리 요소
 const toggleAdminInquiryFeatureButton =
   document.querySelector(
@@ -6821,17 +6946,65 @@ function getRoutineRequestStorageKey(userId) {
   return `routineRequestSubmittedAt:${userId}`;
 }
 
-function recordRoutineRequestReturn(userId) {
+async function recordRoutineRequestReturn(userId) {
   if (!shouldRecordRoutineRequest) {
     return;
   }
 
-  localStorage.setItem(
-    getRoutineRequestStorageKey(userId),
-    new Date().toISOString()
-  );
+  try {
+    let { data: savedRequest, error: requestError } =
+      await supabaseClient
+        .from("routine_requests")
+        .insert({ user_id: userId })
+        .select("requested_at")
+        .single();
 
-  shouldRecordRoutineRequest = false;
+    // 이미 대기 중인 신청이 있으면 기존 신청 확인
+    if (requestError?.code === "23505") {
+      const existingResult = await supabaseClient
+        .from("routine_requests")
+        .select("requested_at")
+        .eq("user_id", userId)
+        .eq("status", "pending")
+        .maybeSingle();
+
+      savedRequest = existingResult.data;
+      requestError = existingResult.error;
+    }
+
+    if (requestError || !savedRequest?.requested_at) {
+      throw requestError ||
+        new Error("저장된 루틴 신청을 확인하지 못했습니다.");
+    }
+
+    // 서버에서 저장을 확인한 뒤에만 신청 상태 기록
+    localStorage.setItem(
+      getRoutineRequestStorageKey(userId),
+      savedRequest.requested_at
+    );
+
+    const cleanUrl = new URL(window.location.href);
+    cleanUrl.searchParams.delete("routine-requested");
+
+    window.history.replaceState(
+      window.history.state,
+      "",
+      cleanUrl.pathname + cleanUrl.search + cleanUrl.hash
+    );
+
+    shouldRecordRoutineRequest = false;
+  } catch (requestError) {
+    console.error(
+      "루틴 신청 알림 저장 확인 실패:",
+      requestError
+    );
+
+    window.alert(
+      "루틴 신청 알림이 전달되었는지 확인하지 못했습니다.\n" +
+      "인터넷 연결을 확인한 뒤 앱의 새로고침 버튼을 눌러 주세요.\n" +
+      "구글 폼은 다시 제출하지 않아도 됩니다."
+    );
+  }
 }
 
 function updateRoutineRequestStatus(
@@ -7050,7 +7223,9 @@ async function showWorkoutApp(userId) {
   memberInquiryVisibleCount =
     MEMBER_INQUIRY_PAGE_SIZE;
 
-  recordRoutineRequestReturn(userId);
+    await recordRoutineRequestReturn(
+      userId
+    );
 
   await Promise.all([
     loadMemberRoutine(userId),
@@ -7069,6 +7244,311 @@ async function showWorkoutApp(userId) {
     )
   ]);
 
+}
+
+// 관리자용 새 루틴 신청 목록 표시
+function renderAdminRoutineRequests(
+  requests
+) {
+  adminRoutineRequestList
+    .replaceChildren();
+
+  if (
+    !requests ||
+    requests.length === 0
+  ) {
+    adminRoutineRequestListMessage
+      .textContent =
+      "현재 대기 중인 루틴 신청이 없습니다.";
+
+    return;
+  }
+
+  adminRoutineRequestListMessage
+    .textContent = "";
+
+  requests.forEach(function (request) {
+    const requestCard =
+      document.createElement("article");
+
+    requestCard.className =
+      "admin-routine-request-card";
+
+    const requestContent =
+      document.createElement("div");
+
+    requestContent.className =
+      "admin-routine-request-content";
+
+    const requestHeader =
+      document.createElement("div");
+
+    requestHeader.className =
+      "admin-routine-request-header";
+
+    const memberName =
+      document.createElement("strong");
+
+    memberName.textContent =
+      request.memberProfile
+        ?.display_name ||
+      "회원 정보 없음";
+
+    const statusBadge =
+      document.createElement("span");
+
+    statusBadge.className =
+      "admin-routine-request-badge";
+
+    statusBadge.textContent =
+      "루틴 신청 대기";
+
+    requestHeader.append(
+      memberName,
+      statusBadge
+    );
+
+    const requestDate =
+      document.createElement("p");
+
+    requestDate.className =
+      "admin-routine-request-date";
+
+    requestDate.textContent =
+      `신청 ${formatMemberInquiryDate(
+        request.requested_at
+      )}`;
+
+    const contactParts = [];
+
+    if (
+      request.memberProfile?.email
+    ) {
+      contactParts.push(
+        request.memberProfile.email
+      );
+    }
+
+    if (
+      request.memberProfile?.phone_last4
+    ) {
+      contactParts.push(
+        `전화번호 끝 ${
+          request.memberProfile.phone_last4
+        }`
+      );
+    }
+
+    requestContent.append(
+      requestHeader,
+      requestDate
+    );
+
+    if (contactParts.length > 0) {
+      const memberContact =
+        document.createElement("p");
+
+      memberContact.className =
+        "admin-routine-request-contact";
+
+      memberContact.textContent =
+        contactParts.join(" · ");
+
+      requestContent.append(
+        memberContact
+      );
+    }
+
+    const selectMemberButton =
+      document.createElement("button");
+
+    selectMemberButton.type =
+      "button";
+
+    selectMemberButton.className =
+      "admin-routine-request-select-button";
+
+    selectMemberButton.textContent =
+      "루틴 배정하기";
+
+      selectMemberButton.addEventListener(
+        "click",
+        async function () {
+          selectMemberButton.disabled = true;
+      
+          try {
+            // 새로 가입한 회원도 선택할 수 있도록 갱신
+            await loadAdminMembers();
+      
+            if (adminScreen.hidden) {
+              return;
+            }
+      
+            adminMemberSearch.value = "";
+            adminMemberSelect.value =
+              request.user_id;
+      
+            if (
+              adminMemberSelect.value !==
+              request.user_id
+            ) {
+              adminRoutineRequestListMessage.textContent =
+                "회원을 선택하지 못했습니다. 회원 목록을 확인해 주세요.";
+      
+              return;
+            }
+      
+            await loadSelectedAdminMemberRoutine();
+      
+            if (
+              adminScreen.hidden ||
+              adminMemberSelect.value !==
+                request.user_id ||
+              saveAdminRoutineButton.disabled
+            ) {
+              return;
+            }
+      
+            // 기존 루틴 수정이 아닌 새 배정 모드
+            adminRoutineMode = "new";
+            renderAdminRoutineEditor();
+      
+            const memberSearchCard =
+              adminMemberSearch.closest(
+                ".admin-card"
+              );
+      
+            memberSearchCard?.scrollIntoView({
+              behavior: "smooth",
+              block: "start"
+            });
+      
+          } catch (selectError) {
+            console.error(
+              "신청 회원 선택 실패:",
+              selectError
+            );
+      
+            adminRoutineRequestListMessage.textContent =
+              "회원 정보를 불러오지 못했습니다. 다시 시도해 주세요.";
+      
+          } finally {
+            selectMemberButton.disabled = false;
+          }
+        }
+      );
+
+    requestCard.append(
+      requestContent,
+      selectMemberButton
+    );
+
+    adminRoutineRequestList.append(
+      requestCard
+    );
+  });
+}
+
+// 관리자용 새 루틴 신청 목록 불러오기
+async function loadAdminRoutineRequests(
+  preserveCurrentList = false
+) {
+  if (adminScreen.hidden) {
+    return;
+  }
+
+  const currentRequestId =
+    ++adminRoutineRequestLoadId;
+
+  const canUpdateList = () =>
+    currentRequestId === adminRoutineRequestLoadId &&
+    !adminScreen.hidden;
+
+  if (!preserveCurrentList) {
+    adminRoutineRequestList.replaceChildren();
+    adminRoutineRequestListMessage.textContent =
+      "루틴 신청 내역을 불러오고 있습니다.";
+  }
+
+  try {
+    const { data: requests, error: requestsError } =
+      await supabaseClient
+        .from("routine_requests")
+        .select("id, user_id, status, requested_at")
+        .eq("status", "pending")
+        .order("requested_at", { ascending: false });
+
+    if (!canUpdateList()) {
+      return;
+    }
+
+    if (requestsError) {
+      throw requestsError;
+    }
+
+    const memberIds = [
+      ...new Set(
+        (requests || []).map((request) => request.user_id)
+      )
+    ];
+
+    let memberProfiles = [];
+
+    if (memberIds.length > 0) {
+      const { data: profiles, error: profilesError } =
+        await supabaseClient
+          .from("profiles")
+          .select("id, display_name, email, phone_last4")
+          .in("id", memberIds);
+
+      if (!canUpdateList()) {
+        return;
+      }
+
+      if (profilesError) {
+        throw profilesError;
+      }
+
+      memberProfiles = profiles || [];
+    }
+
+    const profileById = new Map(
+      memberProfiles.map((profile) => [
+        profile.id,
+        profile
+      ])
+    );
+
+    const requestsWithProfiles = (requests || []).map(
+      (request) => ({
+        ...request,
+        memberProfile:
+          profileById.get(request.user_id) || null
+      })
+    );
+
+    if (!canUpdateList()) {
+      return;
+    }
+
+    renderAdminRoutineRequests(requestsWithProfiles);
+  } catch (loadError) {
+    if (!canUpdateList()) {
+      return;
+    }
+
+    console.error(
+      "루틴 신청 내역 불러오기 실패:",
+      loadError
+    );
+
+    if (!preserveCurrentList) {
+      adminRoutineRequestList.replaceChildren();
+    }
+
+    adminRoutineRequestListMessage.textContent =
+      "루틴 신청 내역을 불러오지 못했습니다.";
+  }
 }
 
 // 관리자용 회원 목록 불러오기
@@ -7226,13 +7706,19 @@ async function showAdminApp() {
   adminMemberSearch.value = "";
 
   await Promise.all([
+    loadAdminRoutineRequests(),
     loadAdminMembers(),
     loadAdminCommunityPosts(),
     loadAdminInquirySetting(),
     loadAdminInquiries()
   ]);
 
-  await startInquiryRealtimeSubscription("admin");
+  await Promise.all([
+    startInquiryRealtimeSubscription(
+      "admin"
+    ),
+    startAdminRoutineRequestSubscription()
+  ]);
 }
 
 // 현재 로그인한 계정의 역할에 따라 화면 선택
@@ -7922,7 +8408,8 @@ async function handleLogout() {
 
     await Promise.all([
       stopInquiryRealtimeSubscription(),
-      stopMemberRoutineRealtimeSubscription()
+      stopMemberRoutineRealtimeSubscription(),
+      stopAdminRoutineRequestSubscription()
     ]);
 
     // 회원·관리자 화면을 숨기고 로그인 화면 표시
