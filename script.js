@@ -150,7 +150,7 @@ const loadMoreMemberInquiriesButton =
 let isMemberInquiryEnabled = false;
 let openMemberInquiryId = null;
 
-const MEMBER_INQUIRY_PAGE_SIZE = 5;
+const MEMBER_INQUIRY_PAGE_SIZE = 3;
 
 let memberInquiryVisibleCount =
   MEMBER_INQUIRY_PAGE_SIZE;
@@ -395,7 +395,7 @@ async function loadMemberInquirySetting() {
 
     memberInquiryAvailabilityMessage.textContent =
       isMemberInquiryEnabled
-        ? "문의 내용을 남기면 센터 관리자가 확인 후 답변해 드립니다."
+        ? "작성한 문의와 센터의 답변은 본인만 확인할 수 있습니다."
         : "현재 1:1 문의 접수가 중단되어 있습니다. 기존 문의와 답변은 계속 확인할 수 있습니다.";
 
   } catch (settingError) {
@@ -3735,6 +3735,11 @@ const adminCommunityListMessage =
     "#adminCommunityListMessage"
   );
 
+const loadMoreAdminCommunityPostsButton =
+  document.querySelector(
+    "#loadMoreAdminCommunityPostsButton"
+  );
+
 // 관리자 1:1 문의 관리 요소
 const toggleAdminInquiryFeatureButton =
   document.querySelector(
@@ -4329,31 +4334,31 @@ function renderAdminInquiries(inquiries) {
       inquiry.last_message_at ||
       inquiry.created_at;
 
-      const inquiryDateLine =
+    const inquiryDateLine =
       document.createElement("span");
-    
+
     inquiryDateLine.className =
       "admin-inquiry-meta-date";
-    
+
     inquiryDateLine.textContent =
       formatMemberInquiryDate(
         latestMessageDate
       );
-    
+
     inquiryMeta.append(
       inquiryDateLine
     );
-    
+
     if (memberDetails.length > 0) {
       const memberContactLine =
         document.createElement("span");
-    
+
       memberContactLine.className =
         "admin-inquiry-meta-contact";
-    
+
       memberContactLine.textContent =
         memberDetails.join(" · ");
-    
+
       inquiryMeta.append(
         memberContactLine
       );
@@ -4481,7 +4486,7 @@ function renderAdminInquiries(inquiries) {
       document.createElement("p");
 
     archiveMessage.className =
-        "member-inquiry-delete-message";
+      "member-inquiry-delete-message";
 
     archiveMessage.setAttribute(
       "aria-live",
@@ -4865,6 +4870,11 @@ let selectedAdminCommunityFiles = [];
 let adminCommunityPreviewUrls = [];
 
 // 관리 화면에 불러온 센터 소식
+const ADMIN_COMMUNITY_PAGE_SIZE = 5;
+
+let adminCommunityVisibleCount =
+  ADMIN_COMMUNITY_PAGE_SIZE;
+
 let loadedAdminCommunityPosts = [];
 let editingAdminCommunityPostId = null;
 let existingAdminCommunityImages = [];
@@ -4994,6 +5004,8 @@ function renderAdminCommunityPostList(
   posts
 ) {
   adminCommunityPostList.innerHTML = "";
+  loadMoreAdminCommunityPostsButton.hidden =
+    true;
 
   if (!posts || posts.length === 0) {
     adminCommunityListMessage.textContent =
@@ -5005,7 +5017,13 @@ function renderAdminCommunityPostList(
   adminCommunityListMessage.textContent =
     "";
 
-  posts.forEach(function (post, postIndex) {
+  const visiblePosts =
+    posts.slice(
+      0,
+      adminCommunityVisibleCount
+    );
+
+  visiblePosts.forEach(function (post, postIndex) {
     const manageCard =
       document.createElement("article");
 
@@ -5244,8 +5262,23 @@ function renderAdminCommunityPostList(
       manageCard
     );
   });
+
+  loadMoreAdminCommunityPostsButton.hidden =
+    adminCommunityVisibleCount >=
+    posts.length;
 }
 
+loadMoreAdminCommunityPostsButton.addEventListener(
+  "click",
+  function () {
+    adminCommunityVisibleCount +=
+      ADMIN_COMMUNITY_PAGE_SIZE;
+
+    renderAdminCommunityPostList(
+      loadedAdminCommunityPosts
+    );
+  }
+);
 
 // 관리자용 센터 소식 불러오기
 async function loadAdminCommunityPosts() {
