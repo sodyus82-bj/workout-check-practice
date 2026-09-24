@@ -559,7 +559,7 @@ function scheduleAdminRoutineRequestRefresh() {
       if (
         adminScreen.hidden ||
         currentChannel !==
-          adminRoutineRequestRealtimeChannel
+        adminRoutineRequestRealtimeChannel
       ) {
         return;
       }
@@ -667,12 +667,47 @@ async function startAdminRoutineRequestSubscription() {
     });
 }
 
+// 회원 문의 메뉴의 활성·비활성 상태 반영
+function updateMemberInquiryMenuState() {
+  const inquiryButton = document.querySelector(
+    "#communityInquiryMenuButton"
+  );
+
+  const unavailableMessage = document.querySelector(
+    "#communityInquiryUnavailableMessage"
+  );
+
+  const inquirySection = document.querySelector(
+    "#memberInquirySection"
+  );
+
+  inquiryButton.disabled = !isMemberInquiryEnabled;
+
+  inquiryButton.setAttribute(
+    "aria-disabled",
+    String(!isMemberInquiryEnabled)
+  );
+
+  unavailableMessage.hidden = isMemberInquiryEnabled;
+
+  if (!isMemberInquiryEnabled) {
+    inquiryButton.tabIndex = -1;
+
+    // 문의 화면을 보고 있었다면 센터 소식으로 이동
+    if (!inquirySection.hidden) {
+      showCommunityMenu("news");
+    }
+  } else {
+    inquiryButton.tabIndex =
+      inquiryButton.getAttribute("aria-selected") === "true"
+        ? 0
+        : -1;
+  }
+}
+
 // 회원 문의 기능 온·오프 상태 불러오기
 async function loadMemberInquirySetting() {
-  memberInquiryComposer.hidden = true;
-
-  memberInquiryAvailabilityMessage.textContent =
-    "문의 기능을 확인하고 있습니다.";
+  updateMemberInquiryMenuState();
 
   try {
     const {
@@ -700,8 +735,7 @@ async function loadMemberInquirySetting() {
     memberInquiryAvailabilityMessage.textContent =
       isMemberInquiryEnabled
         ? "작성한 문의와 센터의 답변은 본인만 확인할 수 있습니다."
-        : "현재 1:1 문의 접수가 중단되어 있습니다. 기존 문의와 답변은 계속 확인할 수 있습니다.";
-
+        : "현재 1:1 문의 접수가 중단되어 있습니다.";
   } catch (settingError) {
     console.error(
       "회원 문의 설정 불러오기 실패:",
@@ -713,6 +747,8 @@ async function loadMemberInquirySetting() {
 
     memberInquiryAvailabilityMessage.textContent =
       "문의 기능 상태를 확인하지 못했습니다.";
+  } finally {
+    updateMemberInquiryMenuState();
   }
 }
 
@@ -1607,6 +1643,12 @@ const communityMenuPanels = {
 
 // 선택한 중분류 화면 표시
 function showCommunityMenu(menuName) {
+  if (
+    menuName === "inquiry" &&
+    !isMemberInquiryEnabled
+  ) {
+    return;
+  }
   if (!communityMenuPanels[menuName]) {
     return;
   }
@@ -1639,7 +1681,8 @@ function showCommunityMenu(menuName) {
       String(isSelected)
     );
 
-    button.tabIndex = isSelected ? 0 : -1;
+    button.tabIndex =
+      isSelected && !button.disabled ? 0 : -1;
   });
 }
 
@@ -1673,6 +1716,10 @@ communityMenuButtons.forEach((button, index) => {
 
     const nextButton =
       communityMenuButtons[nextIndex];
+
+    if (nextButton.disabled) {
+      return;
+    }
 
     showCommunityMenu(
       nextButton.dataset.communityMenu
@@ -4144,7 +4191,7 @@ const loadMoreAdminCommunityPostsButton =
     "#loadMoreAdminCommunityPostsButton"
   );
 
-  const adminRoutineRequestListMessage =
+const adminRoutineRequestListMessage =
   document.querySelector(
     "#adminRoutineRequestListMessage"
   );
@@ -7096,7 +7143,7 @@ async function recordRoutineRequestReturn(userId) {
 
     if (requestError || !savedRequest?.requested_at) {
       throw requestError ||
-        new Error("저장된 루틴 신청을 확인하지 못했습니다.");
+      new Error("저장된 루틴 신청을 확인하지 못했습니다.");
     }
 
     // 서버에서 저장을 확인한 뒤에만 신청 상태 기록
@@ -7345,9 +7392,9 @@ async function showWorkoutApp(userId) {
   memberInquiryVisibleCount =
     MEMBER_INQUIRY_PAGE_SIZE;
 
-    await recordRoutineRequestReturn(
-      userId
-    );
+  await recordRoutineRequestReturn(
+    userId
+  );
 
   await Promise.all([
     loadMemberRoutine(userId),
@@ -7455,8 +7502,7 @@ function renderAdminRoutineRequests(
       request.memberProfile?.phone_last4
     ) {
       contactParts.push(
-        `전화번호 끝 ${
-          request.memberProfile.phone_last4
+        `전화번호 끝 ${request.memberProfile.phone_last4
         }`
       );
     }
@@ -7493,72 +7539,72 @@ function renderAdminRoutineRequests(
     selectMemberButton.textContent =
       "루틴 배정하기";
 
-      selectMemberButton.addEventListener(
-        "click",
-        async function () {
-          selectMemberButton.disabled = true;
-      
-          try {
-            // 새로 가입한 회원도 선택할 수 있도록 갱신
-            await loadAdminMembers();
-      
-            if (adminScreen.hidden) {
-              return;
-            }
-      
-            adminMemberSearch.value = "";
-            adminMemberSelect.value =
-              request.user_id;
-      
-            if (
-              adminMemberSelect.value !==
-              request.user_id
-            ) {
-              adminRoutineRequestListMessage.textContent =
-                "회원을 선택하지 못했습니다. 회원 목록을 확인해 주세요.";
-      
-              return;
-            }
-      
-            await loadSelectedAdminMemberRoutine();
-      
-            if (
-              adminScreen.hidden ||
-              adminMemberSelect.value !==
-                request.user_id ||
-              saveAdminRoutineButton.disabled
-            ) {
-              return;
-            }
-      
-            // 기존 루틴 수정이 아닌 새 배정 모드
-            adminRoutineMode = "new";
-            renderAdminRoutineEditor();
-      
-            const memberSearchCard =
-              adminMemberSearch.closest(
-                ".admin-card"
-              );
-      
-            memberSearchCard?.scrollIntoView({
-              behavior: "smooth",
-              block: "start"
-            });
-      
-          } catch (selectError) {
-            console.error(
-              "신청 회원 선택 실패:",
-              selectError
-            );
-      
-            adminRoutineRequestListMessage.textContent =
-              "회원 정보를 불러오지 못했습니다. 다시 시도해 주세요.";
-      
-          } finally {
-            selectMemberButton.disabled = false;
+    selectMemberButton.addEventListener(
+      "click",
+      async function () {
+        selectMemberButton.disabled = true;
+
+        try {
+          // 새로 가입한 회원도 선택할 수 있도록 갱신
+          await loadAdminMembers();
+
+          if (adminScreen.hidden) {
+            return;
           }
+
+          adminMemberSearch.value = "";
+          adminMemberSelect.value =
+            request.user_id;
+
+          if (
+            adminMemberSelect.value !==
+            request.user_id
+          ) {
+            adminRoutineRequestListMessage.textContent =
+              "회원을 선택하지 못했습니다. 회원 목록을 확인해 주세요.";
+
+            return;
+          }
+
+          await loadSelectedAdminMemberRoutine();
+
+          if (
+            adminScreen.hidden ||
+            adminMemberSelect.value !==
+            request.user_id ||
+            saveAdminRoutineButton.disabled
+          ) {
+            return;
+          }
+
+          // 기존 루틴 수정이 아닌 새 배정 모드
+          adminRoutineMode = "new";
+          renderAdminRoutineEditor();
+
+          const memberSearchCard =
+            adminMemberSearch.closest(
+              ".admin-card"
+            );
+
+          memberSearchCard?.scrollIntoView({
+            behavior: "smooth",
+            block: "start"
+          });
+
+        } catch (selectError) {
+          console.error(
+            "신청 회원 선택 실패:",
+            selectError
+          );
+
+          adminRoutineRequestListMessage.textContent =
+            "회원 정보를 불러오지 못했습니다. 다시 시도해 주세요.";
+
+        } finally {
+          selectMemberButton.disabled = false;
         }
-      );
+      }
+    );
 
     requestCard.append(
       requestContent,
