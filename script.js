@@ -1595,6 +1595,95 @@ loadMoreMemberInquiriesButton.addEventListener(
   }
 );
 
+// 센터 커뮤니티 중분류 메뉴
+const communityMenuButtons = Array.from(
+  document.querySelectorAll("[data-community-menu]")
+);
+
+const communityMenuPanels = {
+  news: communityPostList,
+  inquiry: document.querySelector("#memberInquirySection")
+};
+
+// 선택한 중분류 화면 표시
+function showCommunityMenu(menuName) {
+  if (!communityMenuPanels[menuName]) {
+    return;
+  }
+
+  // 문의하기로 이동하면 소식 영상 정지
+  if (
+    menuName !== "news" &&
+    activeCommunityVideoArea
+  ) {
+    activeCommunityVideoArea.resetCommunityVideo();
+  }
+
+  Object.entries(communityMenuPanels).forEach(
+    ([panelName, panel]) => {
+      panel.hidden = panelName !== menuName;
+    }
+  );
+
+  communityMenuButtons.forEach((button) => {
+    const isSelected =
+      button.dataset.communityMenu === menuName;
+
+    button.classList.toggle(
+      "is-active",
+      isSelected
+    );
+
+    button.setAttribute(
+      "aria-selected",
+      String(isSelected)
+    );
+
+    button.tabIndex = isSelected ? 0 : -1;
+  });
+}
+
+// 중분류 버튼 클릭 및 키보드 조작
+communityMenuButtons.forEach((button, index) => {
+  button.addEventListener("click", function () {
+    showCommunityMenu(
+      button.dataset.communityMenu
+    );
+  });
+
+  button.addEventListener("keydown", function (event) {
+    let nextIndex = index;
+
+    if (event.key === "ArrowRight") {
+      nextIndex =
+        (index + 1) % communityMenuButtons.length;
+    } else if (event.key === "ArrowLeft") {
+      nextIndex =
+        (index - 1 + communityMenuButtons.length) %
+        communityMenuButtons.length;
+    } else if (event.key === "Home") {
+      nextIndex = 0;
+    } else if (event.key === "End") {
+      nextIndex = communityMenuButtons.length - 1;
+    } else {
+      return;
+    }
+
+    event.preventDefault();
+
+    const nextButton =
+      communityMenuButtons[nextIndex];
+
+    showCommunityMenu(
+      nextButton.dataset.communityMenu
+    );
+
+    nextButton.focus({
+      preventScroll: true
+    });
+  });
+});
+
 // 선택한 회원 탭 표시
 function showMemberTab(tabName) {
   // 센터 커뮤니티를 벗어나면 재생 중인 영상 정지
@@ -1609,6 +1698,11 @@ function showMemberTab(tabName) {
 
   if (!selectedPanel) {
     return;
+  }
+
+  // 센터 커뮤니티 진입 시 센터 소식을 기본으로 표시
+  if (tabName === "community") {
+    showCommunityMenu("news");
   }
 
   Object.entries(memberTabPanels).forEach(
