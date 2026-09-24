@@ -192,6 +192,33 @@ let memberInquiryVisibleCount =
 let inquiryRealtimeChannel = null;
 let inquiryRealtimeRefreshTimer = null;
 
+let memberRoutineRealtimeChannel = null;
+let memberRoutineRealtimeRefreshTimer =
+  null;
+
+let currentMemberRoutineUserId = null;
+
+function refreshMemberRoutineWhenVisible() {
+  if (
+    document.visibilityState !==
+    "visible"
+  ) {
+    return;
+  }
+
+  scheduleMemberRoutineRealtimeRefresh();
+}
+
+document.addEventListener(
+  "visibilitychange",
+  refreshMemberRoutineWhenVisible
+);
+
+window.addEventListener(
+  "pageshow",
+  refreshMemberRoutineWhenVisible
+);
+
 const inquiryRealtimeRefreshTargets =
   new Set();
 
@@ -391,6 +418,134 @@ async function startInquiryRealtimeSubscription(
         ) {
           console.error(
             "문의 실시간 연결 실패:",
+            status
+          );
+        }
+      });
+}
+
+// 루틴 변경이 연속으로 발생해도 한 번만 갱신
+function scheduleMemberRoutineRealtimeRefresh() {
+  if (
+    !currentMemberRoutineUserId ||
+    appScreen.hidden
+  ) {
+    return;
+  }
+
+  if (memberRoutineRealtimeRefreshTimer) {
+    clearTimeout(
+      memberRoutineRealtimeRefreshTimer
+    );
+  }
+
+  const userIdToRefresh =
+    currentMemberRoutineUserId;
+
+  memberRoutineRealtimeRefreshTimer =
+    setTimeout(
+      async function () {
+        memberRoutineRealtimeRefreshTimer =
+          null;
+
+        if (
+          !userIdToRefresh ||
+          userIdToRefresh !==
+          currentMemberRoutineUserId ||
+          appScreen.hidden
+        ) {
+          return;
+        }
+
+        try {
+          await loadMemberRoutine(
+            userIdToRefresh,
+            true
+          );
+        } catch (refreshError) {
+          console.error(
+            "루틴 실시간 갱신 실패:",
+            refreshError
+          );
+        }
+      },
+      300
+    );
+}
+
+// 기존 루틴 실시간 구독 종료
+async function stopMemberRoutineRealtimeSubscription() {
+  if (memberRoutineRealtimeRefreshTimer) {
+    clearTimeout(
+      memberRoutineRealtimeRefreshTimer
+    );
+
+    memberRoutineRealtimeRefreshTimer =
+      null;
+  }
+
+  const channelToRemove =
+    memberRoutineRealtimeChannel;
+
+  memberRoutineRealtimeChannel = null;
+  currentMemberRoutineUserId = null;
+
+  if (!channelToRemove) {
+    return;
+  }
+
+  try {
+    await supabaseClient.removeChannel(
+      channelToRemove
+    );
+  } catch (removeChannelError) {
+    console.error(
+      "루틴 실시간 구독 종료 실패:",
+      removeChannelError
+    );
+  }
+}
+
+// 로그인한 회원의 루틴 변경 실시간 구독 시작
+async function startMemberRoutineRealtimeSubscription(
+  userId
+) {
+  await stopMemberRoutineRealtimeSubscription();
+
+  currentMemberRoutineUserId = userId;
+
+  memberRoutineRealtimeChannel =
+    supabaseClient
+      .channel(
+        `member-routine-${userId}-${Date.now()}`
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "member_routines",
+          filter: `user_id=eq.${userId}`
+        },
+        scheduleMemberRoutineRealtimeRefresh
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "member_routines",
+          filter: `user_id=eq.${userId}`
+        },
+        scheduleMemberRoutineRealtimeRefresh
+      )
+      .subscribe(function (status) {
+        if (
+          status === "CHANNEL_ERROR" ||
+          status === "TIMED_OUT"
+        ) {
+          console.error(
+            "루틴 실시간 연결 실패:",
             status
           );
         }
@@ -6715,12 +6870,17 @@ function updateRoutineRequestStatus(
 }
 
 // 회원에게 배정된 최신 루틴 불러오기
-async function loadMemberRoutine(userId) {
+async function loadMemberRoutine(
+  userId,
+  preserveCurrentRoutine = false
+) {
   const routineElement =
     routineImage.closest(".routine-image");
 
-  routineElement.hidden = true;
-  routineDescription.hidden = true;
+  if (!preserveCurrentRoutine) {
+    routineElement.hidden = true;
+    routineDescription.hidden = true;
+  }
 
   const { data, error } = await supabaseClient
     .from("member_routines")
@@ -6734,10 +6894,21 @@ async function loadMemberRoutine(userId) {
     .maybeSingle();
 
   if (error) {
-    updateRoutineRequestStatus(userId, null);
+    console.error(
+      "루틴 불러오기 실패:",
+      error
+    );
 
-    console.error("루틴 불러오기 실패:", error);
-    assignedRoutineName.textContent = "루틴을 불러오지 못했습니다.";
+    if (!preserveCurrentRoutine) {
+      updateRoutineRequestStatus(
+        userId,
+        null
+      );
+
+      assignedRoutineName.textContent =
+        "루틴을 불러오지 못했습니다.";
+    }
+
     return;
   }
 
@@ -6771,16 +6942,88 @@ async function loadMemberRoutine(userId) {
   }
 
   if (!imageUrl) {
-    assignedRoutineName.textContent = "루틴 이미지가 없습니다.";
+    if (!preserveCurrentRoutine) {
+      assignedRoutineName.textContent =
+        "루틴 이미지가 없습니다.";
+    }
+
     return;
   }
 
-  assignedRoutineName.textContent = data.routine_name;
-  renderRoutineDescription(data.routine_description);
-  routineImage.src = imageUrl;
+  const imageIdentity =
+    data.routine_image_path ||
+    data.routine_image_url ||
+    imageUrl;
+
+  const shouldReplaceRoutineImage =
+    !preserveCurrentRoutine ||
+    routineImage.dataset.imageIdentity !==
+    imageIdentity;
+
+  if (
+    preserveCurrentRoutine &&
+    shouldReplaceRoutineImage
+  ) {
+    const isNewImageReady =
+      await new Promise(function (resolve) {
+        const preloadImage =
+          new Image();
+
+        preloadImage.addEventListener(
+          "load",
+          function () {
+            resolve(true);
+          },
+          { once: true }
+        );
+
+        preloadImage.addEventListener(
+          "error",
+          function () {
+            resolve(false);
+          },
+          { once: true }
+        );
+
+        preloadImage.src = imageUrl;
+      });
+
+    if (!isNewImageReady) {
+      console.error(
+        "새 루틴 이미지 미리 불러오기 실패"
+      );
+
+      return;
+    }
+  }
+
+  assignedRoutineName.textContent =
+    data.routine_name;
+
+  const nextRoutineDescription =
+    data.routine_description || "";
+
+  if (
+    !preserveCurrentRoutine ||
+    routineDescription.dataset.sourceText !==
+    nextRoutineDescription
+  ) {
+    renderRoutineDescription(
+      data.routine_description
+    );
+
+    routineDescription.dataset.sourceText =
+      nextRoutineDescription;
+  }
+
+  if (shouldReplaceRoutineImage) {
+    routineImage.src = imageUrl;
+
+    routineImage.dataset.imageIdentity =
+      imageIdentity;
+  }
+
   routineImage.alt = data.routine_name;
-
-
   routineElement.hidden = false;
 }
 
@@ -6807,7 +7050,7 @@ async function showWorkoutApp(userId) {
   memberInquiryVisibleCount =
     MEMBER_INQUIRY_PAGE_SIZE;
 
-    recordRoutineRequestReturn(userId);
+  recordRoutineRequestReturn(userId);
 
   await Promise.all([
     loadMemberRoutine(userId),
@@ -6817,7 +7060,14 @@ async function showWorkoutApp(userId) {
     loadMemberInquiries()
   ]);
 
-  await startInquiryRealtimeSubscription("member");
+  await Promise.all([
+    startInquiryRealtimeSubscription(
+      "member"
+    ),
+    startMemberRoutineRealtimeSubscription(
+      userId
+    )
+  ]);
 
 }
 
@@ -7670,7 +7920,10 @@ async function handleLogout() {
       return;
     }
 
-    await stopInquiryRealtimeSubscription();
+    await Promise.all([
+      stopInquiryRealtimeSubscription(),
+      stopMemberRoutineRealtimeSubscription()
+    ]);
 
     // 회원·관리자 화면을 숨기고 로그인 화면 표시
     appScreen.hidden = true;
