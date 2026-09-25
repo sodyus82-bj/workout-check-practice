@@ -7517,12 +7517,8 @@ function renderMemberRoutineCarousel(
         });
       }
 
-      const height =
-        slides[state.index].getBoundingClientRect().height;
-
-      if (height > 0) {
-        track.style.height = `${Math.ceil(height)}px`;
-      }
+      // 전체 슬라이드 중 가장 높은 내용에 맞춰 높이 유지
+      track.style.removeProperty("height");
     });
   }
 

@@ -3170,6 +3170,10 @@ body.camera-open {
   display: block;
   width: 100%;
   height: auto;
+  aspect-ratio: 4 / 5;
+  object-fit: contain;
+  object-position: center;
+  background-color: transparent;
   border: 0;
   box-shadow: none;
   user-select: none;
@@ -3178,11 +3182,12 @@ body.camera-open {
 
 /* 이미지 바로 아래의 작은 캡션 */
 .routine-carousel-caption {
-  margin: 8px 2px 0;
+  margin: 10px 12px 0;
   color: #667085;
   font-size: 12px;
   font-weight: 400;
   line-height: 1.5;
+  text-align: center;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
