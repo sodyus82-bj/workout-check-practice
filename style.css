@@ -3426,9 +3426,9 @@ body.camera-open {
   min-width: 0;
   min-height: 28px;
   padding: 3px 4px;
-  color: var(--brand-orange);
-  background: #fff5eb;
-  border: 1px solid var(--brand-orange);
+  color: #111111;
+  background: #ffffff;
+  border: 1px solid #111111;
   border-radius: 9px;
   font: inherit;
   font-size: 13px;
@@ -3439,9 +3439,9 @@ body.camera-open {
 }
 
 .routine-component-actions button[aria-expanded="true"] {
-  color: #111111;
-  background: #ffffff;
-  border-color: #111111;
+  color: var(--brand-orange);
+  background: #fff5eb;
+  border-color: var(--brand-orange);
 }
 
 .routine-component-actions button:disabled {
@@ -3573,4 +3573,25 @@ body.camera-open {
 .admin-routine-json-apply-button:focus-visible {
   outline: 2px solid var(--brand-navy);
   outline-offset: 3px;
+}
+
+/* 관리자 루틴 미리보기의 가로폭 확장 방지 */
+#adminRoutineEditor,
+.admin-routine-json-panel {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.admin-routine-json-panel > * {
+  min-width: 0;
+  max-width: 100%;
+}
+
+#adminRoutineJsonPreview {
+  width: 100%;
+  min-width: 0;
+}
+
+#adminRoutineJsonPreview .routine-component-video-frame {
+  min-width: 0;
+  max-width: 100%;
 }
