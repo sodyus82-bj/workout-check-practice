@@ -347,27 +347,65 @@
     return card;
   }
 
-  // 관리자 미리보기와 이후 회원 화면에서 같은 렌더러를 사용합니다.
+  let daySequence = 0;
+
+  // 관리자 미리보기와 회원 화면에서 같은 렌더러를 사용합니다.
   function renderRoutine(routine) {
     const root = element("div", "routine-components");
     routine.days.forEach(function (day) {
       const dayArea = element("section");
       dayArea.setAttribute("aria-label", "DAY " + day.day);
-      dayArea.append(element("h4", "routine-component-day-title", "DAY " + day.day));
+      dayArea.className = "routine-component-day";
+      const heading = element("h4", "routine-component-day-heading");
+      const toggle = element("button", "routine-component-day-toggle");
+      toggle.type = "button";
+      const label = element("span", "routine-component-day-label", "DAY " + day.day);
+      const count = element("span", "routine-component-day-count", "운동 " + day.exercises.length + "개");
+      const action = element("span", "routine-component-day-action", "▼ 운동 보기");
+      toggle.append(label, count, action);
+      const content = element("div", "routine-component-day-content");
+      daySequence += 1;
+      content.id = "routine-component-day-content-" + daySequence;
+      content.hidden = true;
+      toggle.setAttribute("aria-controls", content.id);
+      toggle.setAttribute("aria-expanded", "false");
+      toggle.addEventListener("click", function () {
+        preservePagePosition(function () {
+          const willOpen = content.hidden;
+          if (!willOpen) {
+            // 다른 DAY의 영상은 유지하고, 접는 DAY의 영상만 즉시 종료합니다.
+            Array.from(openMedia).forEach(function (media) {
+              if (content.contains(media.area)) media.close();
+            });
+          }
+          content.hidden = !willOpen;
+          toggle.setAttribute("aria-expanded", String(willOpen));
+          action.textContent = willOpen ? "▲ 접기" : "▼ 운동 보기";
+        });
+      });
+      heading.append(toggle);
+      dayArea.append(heading, content);
       day.exercises.forEach(function (entry, index) {
         if (index > 0) {
           const arrow = element("div", "routine-component-arrow", "↓");
           arrow.setAttribute("aria-hidden", "true");
-          dayArea.append(arrow);
+          content.append(arrow);
         }
-        dayArea.append(createExerciseCard(entry));
+        content.append(createExerciseCard(entry));
       });
       root.append(dayArea);
     });
     const summary = element("section", "routine-component-summary");
     summary.append(
       element("h4", "", "이번 운동 구성 안내"),
-      element("p", "", routine.routineSummary)
+      element(
+        "p",
+        "",
+        routine.routineSummary.replace(
+          /([.!?。！？])[ \t]+/g,
+          "$1\n"
+        )
+      )
     );
     root.append(summary);
     return root;

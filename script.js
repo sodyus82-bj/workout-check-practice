@@ -7887,44 +7887,48 @@ async function loadMemberRoutine(
     }
 
     const preparedComponents = prepareMemberRoutineComponents(data, userId);
-    const entries = getRoutineImageEntries(data);
-    const previous = memberRoutineCarouselState;
+    const hasRoutineComponents = preparedComponents.key !== null;
+    let imageItems = [];
 
-    const sameImages =
-      keepCurrent &&
-      previous &&
-      previous.keys.length === entries.length &&
-      previous.keys.every(function (key, index) {
-        return (
-          key === getRoutineImageKey(entries[index])
+    // JSON 루틴은 운동 카드만 표시하므로 기존 루틴 이미지는 조회하지 않습니다.
+    if (!hasRoutineComponents) {
+      const entries = getRoutineImageEntries(data);
+      const previous = memberRoutineCarouselState;
+
+      const sameImages =
+        keepCurrent &&
+        previous &&
+        previous.keys.length === entries.length &&
+        previous.keys.every(function (key, index) {
+          return (
+            key === getRoutineImageKey(entries[index])
+          );
+        });
+
+      if (sameImages) {
+        // 이미지가 같으면 기존 이미지를 유지하고 캡션만 반영
+        imageItems = entries.map(function (entry, index) {
+          return {
+            ...previous.items[index],
+            ...entry
+          };
+        });
+      } else {
+        const resolvedItems =
+          await resolveRoutineImageItems(data);
+
+        if (!isCurrentRequest()) {
+          return;
+        }
+
+        // 새 이미지가 준비될 때까지 기존 화면 유지
+        imageItems = await Promise.all(
+          resolvedItems.map(preloadMemberRoutineImage)
         );
-      });
 
-    let imageItems;
-
-    if (sameImages) {
-      // 이미지가 같으면 기존 이미지를 유지하고 캡션만 반영
-      imageItems = entries.map(function (entry, index) {
-        return {
-          ...previous.items[index],
-          ...entry
-        };
-      });
-    } else {
-      const resolvedItems =
-        await resolveRoutineImageItems(data);
-
-      if (!isCurrentRequest()) {
-        return;
-      }
-
-      // 새 이미지가 준비될 때까지 기존 화면 유지
-      imageItems = await Promise.all(
-        resolvedItems.map(preloadMemberRoutineImage)
-      );
-
-      if (!isCurrentRequest()) {
-        return;
+        if (!isCurrentRequest()) {
+          return;
+        }
       }
     }
 
@@ -7932,14 +7936,22 @@ async function loadMemberRoutine(
       keepCurrent &&
       memberRoutineDisplayedId === data.id;
 
-    const description =
-      data.routine_description || "";
+      const description = hasRoutineComponents
+      ? ""
+      : data.routine_description || "";
 
-    renderMemberRoutineCarousel(
-      imageItems,
-      data.routine_name,
-      sameRoutine
-    );
+    if (hasRoutineComponents) {
+      // 처음 전환할 때만 캐러셀을 정리하고, 같은 JSON의 자동 갱신은 유지합니다.
+      if (memberRoutineCarouselState || !routineCarousel.hidden) {
+        resetMemberRoutineCarousel();
+      }
+    } else {
+      renderMemberRoutineCarousel(
+        imageItems,
+        data.routine_name,
+        sameRoutine
+      );
+    }
     showMemberRoutineComponents(preparedComponents);
 
     assignedRoutineName.textContent =
