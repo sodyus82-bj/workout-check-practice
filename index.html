@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Nanum+Pen+Script&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="style.css?v=43">
+  <link rel="stylesheet" href="style.css?v=44">
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#ec6a1a">
 
@@ -143,6 +143,30 @@
       <button id="installButton" class="install-button" type="button" hidden>
         📲 이 앱을 홈 화면에 설치
       </button>
+      <!-- 운동 구성 탭에서만 표시하는 휴식 타이머 -->
+      <aside id="memberRestTimer" class="member-rest-timer" aria-label="휴식 타이머" hidden>
+        <section id="restTimerPanel" class="rest-timer-panel" aria-labelledby="restTimerTitle" hidden>
+          <div class="rest-timer-header">
+            <h3 id="restTimerTitle">휴식 타이머</h3>
+            <button id="restTimerClose" class="rest-timer-close" type="button" aria-label="휴식 타이머 접기">접기 ⌄</button>
+          </div>
+          <div class="rest-timer-presets" role="group" aria-label="휴식 시간 선택">
+            <button type="button" data-rest-seconds="30" aria-pressed="false">30초</button>
+            <button type="button" data-rest-seconds="60" aria-pressed="true">60초</button>
+            <button type="button" data-rest-seconds="90" aria-pressed="false">90초</button>
+          </div>
+          <p id="restTimerDisplay" class="rest-timer-display" role="timer" aria-live="off" aria-label="남은 휴식 시간">01:00</p>
+          <p id="restTimerStatus" class="rest-timer-status" role="status" aria-live="polite">휴식 시간을 선택하고 시작해 주세요.</p>
+          <div class="rest-timer-actions">
+            <button id="restTimerStart" type="button">시작</button>
+            <button id="restTimerReset" type="button">초기화</button>
+          </div>
+        </section>
+        <button id="restTimerToggle" class="rest-timer-toggle" type="button" aria-expanded="false" aria-controls="restTimerPanel">
+          <span aria-hidden="true">⏱</span>
+          <span id="restTimerToggleLabel">휴식 타이머</span>
+        </button>
+      </aside>
     </section>
 
     <section id="workoutLogTabPanel" class="member-tab-panel" role="tabpanel" aria-labelledby="workoutLogTabButton"
@@ -680,9 +704,9 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-  <script src="exercise-data.js?v=43"></script>
-  <script src="routine-components.js?v=43"></script>
-  <script src="script.js?v=43"></script>
+  <script src="exercise-data.js?v=44"></script>
+  <script src="routine-components.js?v=44"></script>
+  <script src="script.js?v=44"></script>
 </body>
 
 

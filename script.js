@@ -238,6 +238,10 @@ const MEMBER_INQUIRY_PAGE_SIZE = 3;
 let memberInquiryVisibleCount =
   MEMBER_INQUIRY_PAGE_SIZE;
 
+// 오래 걸린 이전 문의 조회가 새 화면을 덮어쓰지 않도록 구분합니다.
+let memberInquiryLoadRequestId = 0;
+let adminInquiryLoadRequestId = 0;
+
 let inquiryRealtimeChannel = null;
 let inquiryRealtimeRefreshTimer = null;
 
@@ -370,6 +374,8 @@ function scheduleInquiryRealtimeRefresh(
 
 // 기존 문의 실시간 구독 종료
 async function stopInquiryRealtimeSubscription() {
+  memberInquiryLoadRequestId += 1;
+  adminInquiryLoadRequestId += 1;
   if (inquiryRealtimeRefreshTimer) {
     clearTimeout(
       inquiryRealtimeRefreshTimer
@@ -1537,6 +1543,14 @@ function renderMemberInquiries(inquiries) {
 async function loadMemberInquiries(
   preserveCurrentList = false
 ) {
+  const requestId = ++memberInquiryLoadRequestId;
+  const visibleCount = memberInquiryVisibleCount;
+  function isCurrentRequest() {
+    return requestId === memberInquiryLoadRequestId && !appScreen.hidden &&
+      visibleCount === memberInquiryVisibleCount;
+  }
+  if (!isCurrentRequest()) return;
+
   if (!preserveCurrentList) {
     memberInquiryList.replaceChildren();
 
@@ -1553,6 +1567,8 @@ async function loadMemberInquiries(
       data: { user },
       error: userError
     } = await supabaseClient.auth.getUser();
+
+    if (!isCurrentRequest()) return;
 
     if (userError || !user) {
       throw new Error(
@@ -1589,8 +1605,10 @@ async function loadMemberInquiries(
       )
       .range(
         0,
-        memberInquiryVisibleCount - 1
+        visibleCount - 1
       );
+
+    if (!isCurrentRequest()) return;
 
     if (inquiriesError) {
       throw inquiriesError;
@@ -1632,22 +1650,25 @@ async function loadMemberInquiries(
         : "이전 문의 더 보기";
 
   } catch (inquiriesError) {
+    if (!isCurrentRequest()) return;
     console.error(
       "회원 문의 내역 불러오기 실패:",
       inquiriesError
     );
 
-    memberInquiryList.replaceChildren();
-
-    memberInquiryListMessage.textContent =
-      `문의 내역을 불러오지 못했습니다: ${inquiriesError.message ||
-      "알 수 없는 오류"
-      }`;
-
-    loadMoreMemberInquiriesButton.hidden = true;
+    if (preserveCurrentList) {
+      // 자동 갱신 실패 시 보고 있던 문의·답변·입력 내용을 유지합니다.
+      memberInquiryListMessage.textContent =
+        "최신 문의를 확인하지 못했습니다. 기존 내역은 유지됩니다.";
+    } else {
+      memberInquiryList.replaceChildren();
+      memberInquiryListMessage.textContent =
+        `문의 내역을 불러오지 못했습니다: ${inquiriesError.message || "알 수 없는 오류"}`;
+      loadMoreMemberInquiriesButton.hidden = true;
+    }
 
   } finally {
-    loadMoreMemberInquiriesButton.disabled = false;
+    if (isCurrentRequest()) loadMoreMemberInquiriesButton.disabled = false;
   }
 }
 
@@ -5284,6 +5305,15 @@ function renderAdminInquiries(inquiries) {
 async function loadAdminInquiries(
   preserveCurrentList = false
 ) {
+  const requestId = ++adminInquiryLoadRequestId;
+  const visibleCount = adminInquiryVisibleCount;
+  const filter = selectedAdminInquiryFilter;
+  function isCurrentRequest() {
+    return requestId === adminInquiryLoadRequestId && !adminScreen.hidden &&
+      visibleCount === adminInquiryVisibleCount && filter === selectedAdminInquiryFilter;
+  }
+  if (!isCurrentRequest()) return;
+
   if (!preserveCurrentList) {
     adminInquiryList.replaceChildren();
 
@@ -5316,7 +5346,7 @@ async function loadAdminInquiries(
         );
 
     if (
-      selectedAdminInquiryFilter ===
+      filter ===
       "archived"
     ) {
       inquiryQuery =
@@ -5332,7 +5362,7 @@ async function loadAdminInquiries(
           .is("archived_at", null)
           .eq(
             "status",
-            selectedAdminInquiryFilter
+            filter
           );
     }
 
@@ -5349,8 +5379,10 @@ async function loadAdminInquiries(
       )
       .range(
         0,
-        adminInquiryVisibleCount - 1
+        visibleCount - 1
       );
+
+    if (!isCurrentRequest()) return;
 
     if (inquiriesError) {
       throw inquiriesError;
@@ -5381,6 +5413,8 @@ async function loadAdminInquiries(
           phone_last4
         `)
         .in("id", memberIds);
+
+      if (!isCurrentRequest()) return;
 
       if (profilesError) {
         throw profilesError;
@@ -5449,6 +5483,7 @@ async function loadAdminInquiries(
         : "이전 문의 더 보기";
 
   } catch (loadError) {
+    if (!isCurrentRequest()) return;
     console.error(
       "관리자 회원 문의 불러오기 실패:",
       loadError
@@ -5462,7 +5497,7 @@ async function loadAdminInquiries(
     loadMoreAdminInquiriesButton.hidden = true;
 
   } finally {
-    loadMoreAdminInquiriesButton.disabled = false;
+    if (isCurrentRequest()) loadMoreAdminInquiriesButton.disabled = false;
   }
 }
 
@@ -8980,8 +9015,10 @@ async function loadSelectedAdminMemberRoutine() {
       return;
     }
 
-    const imageItems =
-      await resolveRoutineImageItems(latestRoutine);
+    // JSON 편집에는 기존 이미지 주소가 필요하지 않습니다.
+    const imageItems = latestRoutine.routine_json != null
+      ? []
+      : await resolveRoutineImageItems(latestRoutine);
 
     if (!isCurrentSelection()) {
       return;
@@ -9920,3 +9957,188 @@ window.RoutineComponents?.configureAdminContext?.(function () {
 });
 
 initializeLogin();
+
+
+// 회원 운동 구성 탭의 휴식 타이머. 서버 저장 없이 현재 앱에서만 동작합니다.
+(function () {
+  "use strict";
+  const app = document.querySelector("#appScreen");
+  const routinePanel = document.querySelector("#routineTabPanel");
+  const widget = document.querySelector("#memberRestTimer");
+  const toggle = document.querySelector("#restTimerToggle");
+  const toggleLabel = document.querySelector("#restTimerToggleLabel");
+  const panel = document.querySelector("#restTimerPanel");
+  const close = document.querySelector("#restTimerClose");
+  const display = document.querySelector("#restTimerDisplay");
+  const status = document.querySelector("#restTimerStatus");
+  const start = document.querySelector("#restTimerStart");
+  const reset = document.querySelector("#restTimerReset");
+  const presets = Array.from(document.querySelectorAll("[data-rest-seconds]"));
+  const nav = document.querySelector(".member-bottom-nav");
+  if (!app || !routinePanel || !widget || !toggle || !panel) return;
+
+  let duration = 60;
+  let remaining = duration * 1000;
+  let deadline = null;
+  let phase = "idle";
+  let ticker = null;
+
+  function setText(node, text) {
+    if (node.textContent !== text) node.textContent = text;
+  }
+
+  function isVisible() {
+    return !app.hidden && !routinePanel.hidden && document.visibilityState === "visible";
+  }
+
+  function stopTicker() {
+    if (ticker !== null) window.clearTimeout(ticker);
+    ticker = null;
+  }
+
+  function updateRemaining() {
+    if (phase !== "running") return;
+    remaining = Math.max(0, deadline - Date.now());
+    if (remaining === 0) {
+      phase = "finished";
+      deadline = null;
+      stopTicker();
+    }
+  }
+
+  function render() {
+    const seconds = Math.ceil(remaining / 1000);
+    const time = String(Math.floor(seconds / 60)).padStart(2, "0") + ":" +
+      String(seconds % 60).padStart(2, "0");
+    setText(display, time);
+    setText(toggleLabel, phase === "idle" ? "휴식 타이머" :
+      phase === "finished" ? "휴식 끝!" :
+      phase === "paused" ? time + " · 일시정지" : time + " · 휴식 중");
+    setText(start, phase === "running" ? "일시정지" :
+      phase === "paused" ? "계속" : phase === "finished" ? "다시 시작" : "시작");
+    setText(status, phase === "finished" ? "휴식 끝! 다음 세트를 시작해 주세요." :
+      phase === "running" ? "휴식 중이에요." :
+      phase === "paused" ? "잠시 멈췄어요." : "휴식 시간을 선택하고 시작해 주세요.");
+    widget.dataset.phase = phase;
+    presets.forEach(function (button) {
+      button.setAttribute("aria-pressed", String(Number(button.dataset.restSeconds) === duration));
+    });
+  }
+
+  function scheduleTick() {
+    stopTicker();
+    if (phase !== "running" || !isVisible()) return;
+    ticker = window.setTimeout(function () {
+      ticker = null;
+      updateRemaining();
+      render();
+      scheduleTick();
+    }, 250);
+  }
+
+  function collapse() {
+    panel.hidden = true;
+    toggle.setAttribute("aria-expanded", "false");
+  }
+
+  function resetTimer() {
+    stopTicker();
+    phase = "idle";
+    remaining = duration * 1000;
+    deadline = null;
+    render();
+  }
+
+  function positionWidget() {
+    if (!nav || app.hidden) return;
+    const height = nav.getBoundingClientRect().height;
+    if (height > 0) widget.style.setProperty("--rest-timer-bottom", Math.ceil(height + 12) + "px");
+  }
+
+  function syncVisibility() {
+    widget.hidden = app.hidden || routinePanel.hidden;
+    if (app.hidden) {
+      duration = 60;
+      resetTimer();
+      collapse();
+    } else {
+      if (routinePanel.hidden) collapse();
+      updateRemaining();
+      render();
+      positionWidget();
+    }
+    scheduleTick();
+  }
+
+  toggle.addEventListener("click", function () {
+    if (widget.hidden) return;
+    updateRemaining();
+    render();
+    panel.hidden = !panel.hidden;
+    toggle.setAttribute("aria-expanded", String(!panel.hidden));
+    scheduleTick();
+  });
+
+  close.addEventListener("click", function () {
+    collapse();
+    toggle.focus({ preventScroll: true });
+  });
+
+  start.addEventListener("click", function () {
+    if (widget.hidden) return;
+    const wasRunning = phase === "running";
+    updateRemaining();
+    // 종료 직전에 누른 일시정지 버튼이 새 타이머를 시작하지 않도록 합니다.
+    if (wasRunning && phase === "finished") {
+      render();
+      scheduleTick();
+      return;
+    }
+    if (phase === "running") {
+      phase = "paused";
+      deadline = null;
+    } else {
+      if (phase === "finished") remaining = duration * 1000;
+      deadline = Date.now() + remaining;
+      phase = "running";
+    }
+    render();
+    scheduleTick();
+  });
+
+  reset.addEventListener("click", function () {
+    if (!widget.hidden) resetTimer();
+  });
+
+  presets.forEach(function (button) {
+    button.addEventListener("click", function () {
+      if (widget.hidden) return;
+      const seconds = Number(button.dataset.restSeconds);
+      if (![30, 60, 90].includes(seconds) || seconds === duration) return;
+      duration = seconds;
+      resetTimer();
+    });
+  });
+
+  widget.addEventListener("keydown", function (event) {
+    if (event.key === "Escape" && !panel.hidden) {
+      event.preventDefault();
+      collapse();
+      toggle.focus({ preventScroll: true });
+    }
+  });
+
+  document.addEventListener("click", function (event) {
+    if (!panel.hidden && !widget.contains(event.target)) collapse();
+  });
+
+  const observer = new MutationObserver(syncVisibility);
+  observer.observe(app, { attributes: true, attributeFilter: ["hidden"] });
+  observer.observe(routinePanel, { attributes: true, attributeFilter: ["hidden"] });
+  if (nav && window.ResizeObserver) new window.ResizeObserver(positionWidget).observe(nav);
+  window.addEventListener("resize", positionWidget);
+  window.addEventListener("pagehide", stopTicker);
+  window.addEventListener("pageshow", syncVisibility);
+  document.addEventListener("visibilitychange", syncVisibility);
+  syncVisibility();
+})();
