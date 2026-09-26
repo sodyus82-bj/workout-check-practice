@@ -3336,9 +3336,19 @@ body.camera-open {
   overflow-wrap: anywhere;
 }
 
+.routine-component-info {
+  min-width: 0;
+}
+
+.routine-component-title {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
 .routine-component-number {
-  display: inline-block;
-  margin-bottom: 10px;
+  flex-shrink: 0;
+  white-space: nowrap;
   color: var(--brand-orange);
   font-size: 13px;
   font-weight: 800;
@@ -3376,14 +3386,17 @@ body.camera-open {
 }
 
 .routine-component-name {
+  min-width: 0;
   margin: 0;
-  color: var(--brand-navy);
-  font-size: 16px;
+  color: var(--brand-orange);
+  font-size: 20.8px;
   line-height: 1.4;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
 }
 
 .routine-component-body-parts {
-  margin: 5px 0;
+  margin: 3.5px 0 5px;
   color: #667085;
   font-size: 12px;
   line-height: 1.5;
@@ -3397,7 +3410,7 @@ body.camera-open {
 }
 
 .routine-component-rest {
-  margin: 4px 0 0;
+  margin: 2.8px 0 0;
   color: #667085;
   font-size: 12px;
 }
@@ -3411,22 +3424,24 @@ body.camera-open {
 
 .routine-component-actions button {
   min-width: 0;
-  min-height: 40px;
-  padding: 8px 4px;
-  color: var(--brand-navy);
-  background: #ffffff;
-  border: 1px solid var(--brand-border);
+  min-height: 28px;
+  padding: 3px 4px;
+  color: var(--brand-orange);
+  background: #fff5eb;
+  border: 1px solid var(--brand-orange);
   border-radius: 9px;
   font: inherit;
   font-size: 13px;
+  line-height: 1.4;
+  word-break: keep-all;
   font-weight: 700;
   cursor: pointer;
 }
 
 .routine-component-actions button[aria-expanded="true"] {
-  color: var(--brand-orange);
-  background: #fff5eb;
-  border-color: var(--brand-orange);
+  color: #111111;
+  background: #ffffff;
+  border-color: #111111;
 }
 
 .routine-component-actions button:disabled {
@@ -3452,12 +3467,14 @@ body.camera-open {
   font-size: 13px;
   line-height: 1.7;
   white-space: pre-wrap;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
 }
 
 .routine-component-arrow {
-  padding: 8px 0;
+  padding: 4px 0;
   color: #98a2b3;
-  font-size: 20px;
+  font-size: 10px;
   line-height: 1;
   text-align: center;
 }

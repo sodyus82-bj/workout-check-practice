@@ -221,9 +221,11 @@
     }
     imageArea.append(image, placeholder);
 
-    const info = element("div");
+    const info = element("div", "routine-component-info");
+    const title = element("div", "routine-component-title");
+    title.append(number, element("h5", "routine-component-name", exercise.name));
     info.append(
-      element("h5", "routine-component-name", exercise.name),
+      title,
       element("p", "routine-component-body-parts", exercise.bodyParts.join(" · ")),
       element("p", "routine-component-dose", entry.reps + "회 × " + entry.sets + "세트"),
       element("p", "routine-component-rest", "휴식 " + entry.restSec + "초")
@@ -231,7 +233,7 @@
     main.append(imageArea, info);
 
     const actions = element("div", "routine-component-actions");
-    const detailsButton = element("button", "", "상세설명");
+    const detailsButton = element("button", "", "▼ 상세설명");
     detailsButton.type = "button";
     detailsButton.setAttribute("aria-expanded", "false");
     const details = element("div", "routine-component-details");
@@ -255,11 +257,11 @@
         const willOpen = details.hidden;
         details.hidden = !willOpen;
         detailsButton.setAttribute("aria-expanded", String(willOpen));
-        detailsButton.textContent = willOpen ? "상세설명 접기" : "상세설명";
+        detailsButton.textContent = willOpen ? "▲ 상세설명 접기" : "▼ 상세설명";
       });
     });
 
-    const videoButton = element("button", "", "영상보기");
+    const videoButton = element("button", "", "▼ 영상보기");
     videoButton.type = "button";
     videoButton.setAttribute("aria-expanded", "false");
     const mediaArea = element("div", "routine-component-media");
@@ -273,7 +275,7 @@
         // iframe 자체를 제거해야 숨긴 뒤에도 소리가 재생되는 일을 막습니다.
         mediaArea.replaceChildren();
         mediaArea.hidden = true;
-        videoButton.textContent = "영상보기";
+        videoButton.textContent = "▼ 영상보기";
         videoButton.setAttribute("aria-expanded", "false");
         openMedia.delete(media);
         if (openMedia.size === 0 && mediaObserver) {
@@ -328,7 +330,7 @@
         mediaArea.append(element("p", "routine-component-media-message", "아직 준비된 영상이 없습니다."));
       }
       mediaArea.hidden = false;
-      videoButton.textContent = "영상 닫기";
+      videoButton.textContent = "▲ 영상 닫기";
       videoButton.setAttribute("aria-expanded", "true");
       openMedia.add(media);
       watchMediaVisibility();
@@ -341,7 +343,7 @@
       });
     });
     actions.append(detailsButton, videoButton);
-    card.append(number, main, actions, details, mediaArea);
+    card.append(main, actions, details, mediaArea);
     return card;
   }
 
