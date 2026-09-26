@@ -479,6 +479,31 @@
       </button>
 
       <p id="adminSaveMessage" class="admin-message"></p>
+
+      <!-- 운동 구성 JSON 불러오기 -->
+      <div id="adminRoutineJsonPanel" class="admin-routine-json-panel">
+        <h3>AI 루틴 불러오기</h3>
+
+        <p class="admin-field-help">
+          루틴 JSON을 붙여넣고 미리보기를 확인해 주세요.
+          미리보기만으로는 회원에게 적용되지 않습니다.
+        </p>
+
+        <label for="adminRoutineJsonInput">
+          회원별 루틴 JSON
+        </label>
+
+        <textarea id="adminRoutineJsonInput" rows="10" placeholder="생성한 루틴 JSON 전체를 붙여넣어 주세요." spellcheck="false"
+          autocapitalize="off" autocomplete="off"></textarea>
+
+        <button id="previewAdminRoutineJsonButton" type="button" disabled>
+          JSON 검사 및 미리보기
+        </button>
+
+        <p id="adminRoutineJsonMessage" class="admin-message" aria-live="polite"></p>
+
+        <div id="adminRoutineJsonPreview" class="admin-routine-json-preview" hidden></div>
+      </div>
     </section>
 
     <!-- 센터 커뮤니티 소식 작성 -->
@@ -633,6 +658,8 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
+  <script src="exercise-data.js?v=37"></script>
+  <script src="routine-components.js?v=37"></script>
   <script src="script.js?v=37"></script>
 </body>
 
