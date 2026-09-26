@@ -3749,3 +3749,260 @@ body.camera-open {
 #adminSaveMessage:empty {
   display: none;
 }
+
+
+/* 운동 기구 사진 확대: 기존 카드 크기는 유지합니다. */
+.routine-component-image-button {
+  position: relative;
+  box-sizing: border-box;
+  padding: 0;
+  border: 0;
+  font: inherit;
+  color: inherit;
+  cursor: zoom-in;
+}
+
+.routine-component-image-button:disabled {
+  cursor: default;
+}
+
+.routine-component-image-button:focus-visible {
+  outline: 2px solid var(--brand-orange);
+  outline-offset: 3px;
+}
+
+.routine-component-image-zoom-mark {
+  position: absolute;
+  right: 3px;
+  bottom: 3px;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  color: #fff;
+  background: rgba(20, 32, 52, 0.72);
+  font-size: 18px;
+  line-height: 1;
+  pointer-events: none;
+}
+
+.routine-equipment-image-dialog {
+  box-sizing: border-box;
+  width: calc(100% - 24px);
+  max-width: 800px;
+  max-height: calc(100vh - 32px);
+  max-height: calc(100dvh - 32px);
+  margin: auto;
+  padding: 16px;
+  overflow: auto;
+  overscroll-behavior: contain;
+  color: var(--brand-navy);
+  background: #fff;
+  border: 0;
+  border-radius: 16px;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.24);
+}
+
+.routine-equipment-image-dialog::backdrop {
+  background: rgba(12, 20, 32, 0.75);
+}
+
+.routine-equipment-image-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.routine-equipment-image-header h2 {
+  min-width: 0;
+  margin: 0;
+  font-size: 18px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.routine-equipment-image-close {
+  flex-shrink: 0;
+  min-height: 44px;
+  padding: 9px 14px;
+  color: var(--brand-navy);
+  background: #f5f6f8;
+  border: 1px solid var(--brand-border);
+  border-radius: 10px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.routine-equipment-image-full {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 72vh;
+  max-height: 72dvh;
+  object-fit: contain;
+}
+
+.routine-equipment-image-status {
+  margin: 36px 0;
+  color: #667085;
+  font-size: 14px;
+  text-align: center;
+}
+
+
+/* 운동 구성 전용 휴식 타이머 */
+#routineTabPanel {
+  padding-bottom: 72px;
+}
+
+.member-rest-timer {
+  position: fixed;
+  z-index: 510;
+  left: 50%;
+  bottom: var(--rest-timer-bottom, calc(88px + env(safe-area-inset-bottom)));
+  transform: translateX(-50%);
+  display: grid;
+  justify-items: end;
+  gap: 10px;
+  width: calc(100% - 32px);
+  max-width: 398px;
+  pointer-events: none;
+}
+
+.rest-timer-panel,
+.rest-timer-toggle {
+  pointer-events: auto;
+}
+
+.rest-timer-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 44px;
+  max-width: 100%;
+  padding: 11px 16px;
+  border: 1px solid var(--brand-orange);
+  border-radius: 24px;
+  color: var(--brand-orange);
+  background: #fff;
+  box-shadow: 0 4px 14px rgba(23, 35, 62, 0.14);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+
+.member-rest-timer[data-phase="running"] .rest-timer-toggle,
+.member-rest-timer[data-phase="finished"] .rest-timer-toggle {
+  color: #fff;
+  background: var(--brand-orange);
+}
+
+.rest-timer-panel {
+  width: 100%;
+  max-width: 320px;
+  max-height: calc(100vh - 180px - env(safe-area-inset-bottom));
+  max-height: calc(100dvh - 180px - env(safe-area-inset-bottom));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 16px;
+  color: var(--brand-navy);
+  background: #fff;
+  border: 1px solid var(--brand-border);
+  border-radius: 16px;
+  box-shadow: 0 8px 28px rgba(23, 35, 62, 0.18);
+}
+
+.rest-timer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.rest-timer-header h3 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.rest-timer-close {
+  min-height: 40px;
+  padding: 6px 10px;
+  color: #667085;
+  background: transparent;
+  border: 0;
+  border-radius: 8px;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.rest-timer-presets,
+.rest-timer-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.rest-timer-presets button,
+.rest-timer-actions button {
+  min-width: 0;
+  min-height: 44px;
+  padding: 9px 6px;
+  color: var(--brand-navy);
+  background: #f5f6f8;
+  border: 1px solid var(--brand-border);
+  border-radius: 10px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.rest-timer-presets button[aria-pressed="true"] {
+  color: var(--brand-orange);
+  background: #fff5eb;
+  border-color: var(--brand-orange);
+}
+
+.rest-timer-display {
+  margin: 14px 0 4px;
+  color: var(--brand-navy);
+  font-size: 44px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+  text-align: center;
+}
+
+.rest-timer-status {
+  min-height: 36px;
+  margin: 0 0 12px;
+  color: #667085;
+  font-size: 12px;
+  line-height: 1.5;
+  text-align: center;
+}
+
+.rest-timer-actions {
+  grid-template-columns: 2fr 1fr;
+}
+
+#restTimerStart {
+  color: #fff;
+  background: var(--brand-orange);
+  border-color: var(--brand-orange);
+}
+
+.member-rest-timer button:focus-visible {
+  outline: 2px solid var(--brand-orange);
+  outline-offset: 2px;
+}

@@ -154,6 +154,93 @@
     return "https://www.youtube-nocookie.com/embed/" + id + "?playsinline=1&rel=0";
   }
 
+  let equipmentImageDialog = null;
+  let equipmentImageView = null;
+  let equipmentImageTitle = null;
+  let equipmentImageStatus = null;
+  let equipmentImageCloseButton = null;
+  let equipmentImageState = null;
+
+  function closeEquipmentImage() {
+    if (!equipmentImageState) return;
+    const state = equipmentImageState;
+    equipmentImageState = null;
+    if (equipmentImageDialog.open) equipmentImageDialog.close();
+    equipmentImageView.removeAttribute("src");
+    equipmentImageView.hidden = true;
+    document.body.style.cssText = state.bodyStyle;
+    if (state.trigger.isConnected && !state.trigger.closest("[hidden]")) {
+      state.trigger.focus({ preventScroll: true });
+    }
+    window.scrollTo({ left: state.left, top: state.top, behavior: "instant" });
+  }
+
+  function openEquipmentImage(trigger, source, name) {
+    const src = safeMediaUrl(source.currentSrc || source.src);
+    if (!src || source.hidden || !trigger.isConnected || trigger.closest("[hidden]")) return;
+    if (!equipmentImageDialog) {
+      equipmentImageDialog = element("dialog", "routine-equipment-image-dialog");
+      equipmentImageDialog.setAttribute("aria-labelledby", "routineEquipmentImageTitle");
+      const header = element("div", "routine-equipment-image-header");
+      equipmentImageTitle = element("h2");
+      equipmentImageTitle.id = "routineEquipmentImageTitle";
+      equipmentImageCloseButton = element("button", "routine-equipment-image-close", "닫기 ×");
+      equipmentImageCloseButton.type = "button";
+      equipmentImageCloseButton.setAttribute("aria-label", "기구 이미지 확대 닫기");
+      equipmentImageCloseButton.addEventListener("click", closeEquipmentImage);
+      header.append(equipmentImageTitle, equipmentImageCloseButton);
+      equipmentImageView = element("img", "routine-equipment-image-full");
+      equipmentImageView.decoding = "async";
+      equipmentImageStatus = element("p", "routine-equipment-image-status");
+      equipmentImageStatus.setAttribute("role", "status");
+      equipmentImageView.addEventListener("load", function () {
+        if (!equipmentImageState) return;
+        equipmentImageView.hidden = false;
+        equipmentImageStatus.hidden = true;
+      });
+      equipmentImageView.addEventListener("error", function () {
+        if (!equipmentImageState) return;
+        equipmentImageView.hidden = true;
+        equipmentImageStatus.hidden = false;
+        equipmentImageStatus.textContent = "이미지를 불러오지 못했어요. 닫은 뒤 다시 눌러 주세요.";
+      });
+      equipmentImageDialog.append(header, equipmentImageView, equipmentImageStatus);
+      equipmentImageDialog.addEventListener("cancel", function (event) {
+        event.preventDefault();
+        closeEquipmentImage();
+      });
+      equipmentImageDialog.addEventListener("click", function (event) {
+        if (event.target === equipmentImageDialog) closeEquipmentImage();
+      });
+      equipmentImageDialog.addEventListener("close", function () {
+        if (!equipmentImageDialog.open) closeEquipmentImage();
+      });
+      document.body.append(equipmentImageDialog);
+    }
+    if (equipmentImageState) return;
+    const state = {
+      trigger: trigger, left: window.scrollX, top: window.scrollY,
+      bodyStyle: document.body.style.cssText
+    };
+    equipmentImageTitle.textContent = name;
+    equipmentImageView.alt = name + " 기구 확대 사진";
+    equipmentImageView.hidden = true;
+    equipmentImageStatus.hidden = false;
+    equipmentImageStatus.textContent = "사진 불러오는 중…";
+    equipmentImageDialog.showModal();
+    equipmentImageState = state;
+    // 확대 중 배경 스크롤을 막고, 닫을 때 원래 위치와 스타일을 돌려놓습니다.
+    Object.assign(document.body.style, {
+      position: "fixed", top: -state.top + "px", left: -state.left + "px",
+      width: "100%", overflow: "hidden"
+    });
+    equipmentImageView.src = src;
+    equipmentImageCloseButton.focus({ preventScroll: true });
+    watchMediaVisibility();
+  }
+
+  window.addEventListener("pagehide", closeEquipmentImage);
+
   function stopAllVideos() {
     Array.from(openMedia).forEach(function (media) { media.close(); });
   }
@@ -162,6 +249,8 @@
     if (mediaObserver || !document.body) return;
     // 영역이 삭제되거나 hidden으로 화면이 바뀌면 재생을 종료합니다.
     mediaObserver = new MutationObserver(function () {
+      if (equipmentImageState && (!equipmentImageState.trigger.isConnected ||
+          equipmentImageState.trigger.closest("[hidden]"))) closeEquipmentImage();
       Array.from(openMedia).forEach(function (media) {
         if (!media.area.isConnected || media.area.closest("[hidden]")) media.close();
       });
@@ -195,7 +284,15 @@
     const card = element("article", "routine-component-card");
     const number = element("span", "routine-component-number", String(entry.order).padStart(2, "0"));
     const main = element("div", "routine-component-main");
-    const imageArea = element("div", "routine-component-image-area");
+    const imageArea = element("button", "routine-component-image-area routine-component-image-button");
+    imageArea.type = "button";
+    imageArea.disabled = true;
+    imageArea.setAttribute("aria-label", exercise.name + " 기구 이미지 확대");
+    imageArea.setAttribute("aria-haspopup", "dialog");
+    imageArea.title = "눌러서 크게 보기";
+    const zoomMark = element("span", "routine-component-image-zoom-mark", "⤢");
+    zoomMark.setAttribute("aria-hidden", "true");
+    zoomMark.hidden = true;
     const image = element("img");
     image.width = 88;
     image.height = 88;
@@ -207,9 +304,13 @@
     image.addEventListener("load", function () {
       image.hidden = false;
       placeholder.hidden = true;
+      imageArea.disabled = false;
+      zoomMark.hidden = false;
     });
     image.addEventListener("error", function () {
       image.hidden = true;
+      imageArea.disabled = true;
+      zoomMark.hidden = true;
       placeholder.hidden = false;
       placeholder.textContent = "사진을 불러오지 못했어요";
     });
@@ -219,7 +320,10 @@
     } else {
       placeholder.textContent = "사진 준비 중";
     }
-    imageArea.append(image, placeholder);
+    imageArea.append(image, placeholder, zoomMark);
+    imageArea.addEventListener("click", function () {
+      if (!imageArea.disabled) openEquipmentImage(imageArea, image, exercise.name);
+    });
 
     const info = element("div", "routine-component-info");
     const title = element("div", "routine-component-title");
@@ -398,14 +502,7 @@
     const summary = element("section", "routine-component-summary");
     summary.append(
       element("h4", "", "이번 운동 구성 안내"),
-      element(
-        "p",
-        "",
-        routine.routineSummary.replace(
-          /([.!?。！？])[ \t]+/g,
-          "$1\n"
-        )
-      )
+      element("p", "", routine.routineSummary.replace(/([.!?。！？])[ \t]+/g, "$1\n"))
     );
     root.append(summary);
     return root;
