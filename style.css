@@ -3474,7 +3474,7 @@ body.camera-open {
 .routine-component-arrow {
   padding: 4px 0;
   color: #98a2b3;
-  font-size: 10px;
+  font-size: 13px;
   line-height: 1;
   text-align: center;
 }
@@ -3663,4 +3663,18 @@ body.camera-open {
 
 .routine-component-day-content[hidden] {
   display: none !important;
+}
+
+/* 펼쳐진 DAY 아래 구분선 — 마지막 DAY는 제외 */
+.routine-component-day:has(+ .routine-component-day)
+  > .routine-component-day-content:not([hidden]) {
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--brand-border);
+}
+
+/* 펼쳐진 DAY와 다음 DAY 버튼 사이 여백 */
+.routine-component-day:has(
+  > .routine-component-day-content:not([hidden])
+) + .routine-component-day {
+  margin-top: 20px;
 }

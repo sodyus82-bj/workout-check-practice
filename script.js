@@ -113,6 +113,77 @@ const communityStatusMessage =
     "#communityStatusMessage"
   );
 
+// 회원 센터 소식: 실시간 연결과 기존 카드 보관
+let communityRealtimeChannel = null;
+let communityRealtimeRefreshTimer = null;
+let communitySubscriptionGeneration = 0;
+let communityLoadRequestId = 0;
+const memberCommunityCards = new Map();
+
+function scheduleCommunityRealtimeRefresh() {
+  if (appScreen.hidden || !communityRealtimeChannel) return;
+  communityLoadRequestId += 1;
+  clearTimeout(communityRealtimeRefreshTimer);
+  const channel = communityRealtimeChannel;
+  communityRealtimeRefreshTimer = setTimeout(function () {
+    communityRealtimeRefreshTimer = null;
+    if (appScreen.hidden || channel !== communityRealtimeChannel) return;
+    if (document.visibilityState === "hidden") return;
+    loadCommunityPosts(true);
+  }, 500);
+}
+
+async function stopCommunityRealtimeSubscription() {
+  communitySubscriptionGeneration += 1;
+  communityLoadRequestId += 1;
+  clearTimeout(communityRealtimeRefreshTimer);
+  communityRealtimeRefreshTimer = null;
+  const channel = communityRealtimeChannel;
+  communityRealtimeChannel = null;
+  if (!channel) return;
+  try {
+    await supabaseClient.removeChannel(channel);
+  } catch (error) {
+    console.error("센터 소식 실시간 연결 종료 실패:", error);
+  }
+}
+
+async function startCommunityRealtimeSubscription() {
+  const stopping = stopCommunityRealtimeSubscription();
+  const generation = communitySubscriptionGeneration;
+  await stopping;
+  if (appScreen.hidden || generation !== communitySubscriptionGeneration) return;
+  const channel = supabaseClient.channel(`member-community-${generation}-${Date.now()}`);
+  communityRealtimeChannel = channel;
+  ["community_posts", "community_post_images"].forEach(function (table) {
+    channel.on("postgres_changes", {
+      event: "*", schema: "public", table: table
+    }, function () {
+      // 삭제 이벤트도 감지하고, 실제 공개 자료는 기존 SELECT 권한으로 재조회합니다.
+      if (channel === communityRealtimeChannel) scheduleCommunityRealtimeRefresh();
+    });
+  });
+  channel.subscribe(function (status) {
+    if (channel !== communityRealtimeChannel) return;
+    if (status === "SUBSCRIBED") scheduleCommunityRealtimeRefresh();
+    if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
+      console.error("센터 소식 실시간 연결 실패:", status);
+    }
+  });
+}
+
+function resetMemberCommunityPosts() {
+  communityLoadRequestId += 1;
+  if (activeCommunityVideoArea && communityPostList.contains(activeCommunityVideoArea)) {
+    activeCommunityVideoArea.resetCommunityVideo();
+  }
+  memberCommunityCards.clear();
+  communityPostList.replaceChildren();
+}
+
+window.addEventListener("online", scheduleCommunityRealtimeRefresh);
+
+
 // 회원 1:1 문의 요소
 const memberInquiryAvailabilityMessage =
   document.querySelector(
@@ -190,6 +261,7 @@ function refreshMemberRoutineWhenVisible() {
 
   scheduleMemberRoutineRealtimeRefresh();
   scheduleAdminRoutineRequestRefresh();
+  scheduleCommunityRealtimeRefresh();
 }
 
 document.addEventListener(
@@ -1654,6 +1726,8 @@ function showCommunityMenu(menuName) {
     return;
   }
 
+  if (menuName === "news") scheduleCommunityRealtimeRefresh();
+
   // 문의하기로 이동하면 소식 영상 정지
   if (
     menuName !== "news" &&
@@ -2318,244 +2392,227 @@ function createCommunityImageCarousel(
   return carouselArea;
 }
 
-// 회원 화면에 센터 소식 표시
-function renderCommunityPosts(posts) {
-  communityPostList.innerHTML = "";
+// 이미지 주소의 일시적인 서명값 대신 실제 이미지 정보로 변경 여부 비교
+function getCommunityImagesKey(images) {
+  return JSON.stringify(images.map(function (image) {
+    return [image.id, image.storage_path, image.alt_text || "", image.sort_order];
+  }));
+}
 
-  if (!posts || posts.length === 0) {
-    communityStatusMessage.textContent =
-      "아직 등록된 센터 소식이 없습니다.";
+function createMemberCommunityCard() {
+  const card = document.createElement("article");
+  card.className = "community-post-card";
+  const content = document.createElement("div");
+  content.className = "community-post-content";
+  const title = document.createElement("h2");
+  title.className = "community-post-title";
+  const body = document.createElement("p");
+  body.className = "community-post-body";
+  const date = document.createElement("time");
+  date.className = "community-post-date";
+  content.append(title, body, date);
+  card.append(content);
+  const separator = document.createElement("div");
+  separator.className = "content-list-separator";
+  separator.setAttribute("aria-hidden", "true");
+  return { card, content, title, body, date, separator,
+    imageArea: null, videoArea: null, imagesKey: null, videoUrl: null, post: null };
+}
 
-    communityPostList.append(
-      communityStatusMessage
-    );
-
-    return;
+function updateMemberCommunityCard(entry, post) {
+  const previous = entry.post;
+  if (!previous || previous.title !== post.title) entry.title.textContent = post.title;
+  if (!previous || previous.body !== post.body) {
+    entry.body.replaceChildren();
+    appendTextWithLinks(entry.body, post.body || "");
   }
-
-  posts.forEach(function (post, postIndex) {
-    const postCard =
-      document.createElement("article");
-
-    postCard.className =
-      "community-post-card";
-
-    const postImages =
-      post.community_post_images || [];
-
-    const imageCarousel =
-      postImages.length > 0
-        ? createCommunityImageCarousel(
-          postImages,
-          post.title
-        )
-        : null;
-
-    const videoArea =
-      createCommunityVideoFacade(
-        post.video_url,
-        post.title
-      );
-
-    const postContent =
-      document.createElement("div");
-
-    postContent.className =
-      "community-post-content";
-
-    const postTitle =
-      document.createElement("h2");
-
-    postTitle.className =
-      "community-post-title";
-
-    postTitle.textContent = post.title;
-
-    const postBody =
-      document.createElement("p");
-
-    postBody.className =
-      "community-post-body";
-
-    appendTextWithLinks(
-      postBody,
-      post.body || ""
-    );
-
-    const postDate =
-      document.createElement("time");
-
-    postDate.className =
-      "community-post-date";
-
-    postDate.dateTime =
-      post.published_at || "";
-
-    postDate.textContent =
-      new Intl.DateTimeFormat(
-        "ko-KR",
-        {
-          year: "numeric",
-          month: "long",
-          day: "numeric"
-        }
-      ).format(
-        new Date(post.published_at)
-      );
-
-    postContent.append(
-      postTitle,
-      postBody
-    );
-
-
-    postContent.append(postDate);
-
-    if (imageCarousel) {
-      postCard.append(imageCarousel);
+  if (!previous || previous.published_at !== post.published_at) {
+    entry.date.dateTime = post.published_at || "";
+    const date = new Date(post.published_at);
+    entry.date.textContent = Number.isNaN(date.getTime()) ? "" :
+      new Intl.DateTimeFormat("ko-KR", { year: "numeric", month: "long", day: "numeric" }).format(date);
+  }
+  const images = post.community_post_images || [];
+  const imagesKey = getCommunityImagesKey(images);
+  if (entry.imagesKey !== imagesKey) {
+    const nextArea = images.length ? createCommunityImageCarousel(images, post.title) : null;
+    if (entry.imageArea) entry.imageArea.remove();
+    entry.imageArea = nextArea;
+    if (nextArea) entry.card.insertBefore(nextArea, entry.card.firstChild);
+    entry.imagesKey = imagesKey;
+  } else if (previous && previous.title !== post.title && entry.imageArea) {
+    entry.imageArea.querySelector(".community-image-carousel").setAttribute("aria-label", `${post.title} 이미지`);
+    entry.imageArea.querySelectorAll("img").forEach(function (image, index) {
+      image.alt = images[index].alt_text || `${post.title} 이미지 ${index + 1}`;
+    });
+  }
+  const videoUrl = post.video_url || "";
+  if (entry.videoUrl !== videoUrl) {
+    if (entry.videoArea) {
+      if (activeCommunityVideoArea === entry.videoArea) entry.videoArea.resetCommunityVideo();
+      entry.videoArea.remove();
     }
+    entry.videoArea = createCommunityVideoFacade(videoUrl, post.title);
+    if (entry.videoArea) entry.card.insertBefore(entry.videoArea, entry.content);
+    entry.videoUrl = videoUrl;
+  } else if (entry.videoArea && previous && previous.title !== post.title) {
+    const facade = entry.videoArea.querySelector("button");
+    const thumbnail = entry.videoArea.querySelector("img");
+    const frame = entry.videoArea.querySelector("iframe");
+    if (facade) facade.setAttribute("aria-label", `${post.title} 영상 재생`);
+    if (thumbnail) thumbnail.alt = `${post.title} 영상 미리보기`;
+    if (frame) frame.title = `${post.title} 유튜브 영상`;
+  }
+  entry.post = post;
+}
 
-    if (videoArea) {
-      postCard.append(videoArea);
+// 재생 중인 iframe의 부모는 떼었다 붙이지 않고, 주변 카드만 재배치합니다.
+function reconcileCommunityNodes(nodes, protectedCard) {
+  const wanted = new Set(nodes);
+  Array.from(communityPostList.children).forEach(function (node) {
+    if (!wanted.has(node)) node.remove();
+  });
+  const pivot = nodes.indexOf(protectedCard);
+  function placeReverse(from, to, anchor) {
+    for (let index = from; index >= to; index -= 1) {
+      const node = nodes[index];
+      if (node.parentNode !== communityPostList || node.nextSibling !== anchor) {
+        communityPostList.insertBefore(node, anchor);
+      }
+      anchor = node;
     }
+  }
+  if (pivot >= 0 && protectedCard.parentNode === communityPostList) {
+    placeReverse(nodes.length - 1, pivot + 1, null);
+    placeReverse(pivot - 1, 0, protectedCard);
+  } else {
+    placeReverse(nodes.length - 1, 0, null);
+  }
+}
 
-    postCard.append(postContent);
-
-    if (postIndex > 0) {
-      const postSeparator =
-        document.createElement("div");
-
-      postSeparator.className =
-        "content-list-separator";
-
-      postSeparator.setAttribute(
-        "aria-hidden",
-        "true"
-      );
-
-      communityPostList.append(
-        postSeparator
-      );
+// 기존 목록을 비우지 않고 수정·이동·삭제된 부분만 반영
+function renderCommunityPosts(posts) {
+  const wantedIds = new Set(posts.map(function (post) { return String(post.id); }));
+  const visible = !appScreen.hidden && !memberTabPanels.community.hidden && !communityPostList.hidden;
+  const scrollLeft = window.scrollX;
+  const scrollTop = window.scrollY;
+  let anchor = null;
+  let anchorTop = 0;
+  if (visible && communityPostList.getBoundingClientRect().top < 0) {
+    const survivor = Array.from(communityPostList.children).find(function (card) {
+      return wantedIds.has(card.dataset.communityPostId) && card.getBoundingClientRect().bottom > 0;
+    });
+    if (survivor) { anchor = survivor; anchorTop = survivor.getBoundingClientRect().top; }
+  }
+  const nodes = [];
+  posts.forEach(function (post, index) {
+    const id = String(post.id);
+    let entry = memberCommunityCards.get(id);
+    if (!entry) {
+      entry = createMemberCommunityCard();
+      entry.card.dataset.communityPostId = id;
+      memberCommunityCards.set(id, entry);
     }
+    updateMemberCommunityCard(entry, post);
+    if (index > 0) nodes.push(entry.separator);
+    nodes.push(entry.card);
+  });
+  memberCommunityCards.forEach(function (entry, id) {
+    if (wantedIds.has(id)) return;
+    if (activeCommunityVideoArea && entry.card.contains(activeCommunityVideoArea)) {
+      activeCommunityVideoArea.resetCommunityVideo();
+    }
+    memberCommunityCards.delete(id);
+  });
+  if (!posts.length) {
+    communityStatusMessage.textContent = "아직 등록된 센터 소식이 없습니다.";
+    nodes.push(communityStatusMessage);
+  }
+  const protectedCard = activeCommunityVideoArea ?
+    activeCommunityVideoArea.closest(".community-post-card") : null;
+  reconcileCommunityNodes(nodes, protectedCard);
+  if (visible) {
+    const top = anchor && anchor.isConnected ?
+      window.scrollY + anchor.getBoundingClientRect().top - anchorTop : scrollTop;
+    if (Math.abs(window.scrollY - top) > 0.5 || window.scrollX !== scrollLeft) {
+      window.scrollTo({ left: scrollLeft, top: top, behavior: "instant" });
+    }
+  }
+}
 
-    communityPostList.append(postCard);
+function preloadCommunityImage(url) {
+  return new Promise(function (resolve) {
+    const image = new Image();
+    let done = false;
+    function finish() {
+      if (done) return;
+      done = true;
+      clearTimeout(timer);
+      image.onload = null;
+      image.onerror = null;
+      resolve();
+    }
+    const timer = setTimeout(finish, 8000);
+    image.onload = finish;
+    image.onerror = finish;
+    image.src = url;
   });
 }
 
-
-// 공개된 센터 소식 불러오기
-async function loadCommunityPosts() {
-  communityPostList.replaceChildren(
-    communityStatusMessage
-  );
-
-  communityStatusMessage.textContent =
-    "센터 소식을 불러오고 있습니다.";
-
+// 자동 갱신 중에는 로딩 문구나 빈 목록으로 기존 화면을 교체하지 않습니다.
+async function loadCommunityPosts(preserveCurrentList = false) {
+  const requestId = ++communityLoadRequestId;
+  const isCurrent = function () { return requestId === communityLoadRequestId && !appScreen.hidden; };
+  if (!preserveCurrentList && memberCommunityCards.size === 0) {
+    communityStatusMessage.textContent = "센터 소식을 불러오고 있습니다.";
+    communityPostList.replaceChildren(communityStatusMessage);
+  }
   try {
-    const {
-      data: posts,
-      error: postsError
-    } = await supabaseClient
-      .from("community_posts")
-      .select(`
-        id,
-        title,
-        body,
-        video_url,
-        display_order,
-        published_at,
-        community_post_images (
-          id,
-          storage_path,
-          alt_text,
-          sort_order
-        )
-      `)
-      .eq("is_published", true)
-      .order(
-        "display_order",
-        { ascending: true }
-      )
-      .order(
-        "published_at",
-        { ascending: false }
-      );
-
-    if (postsError) {
-      throw postsError;
+    const { data: posts, error } = await supabaseClient.from("community_posts").select(`
+      id, title, body, video_url, display_order, published_at,
+      community_post_images (id, storage_path, alt_text, sort_order)
+    `).eq("is_published", true)
+      .order("display_order", { ascending: true })
+      .order("published_at", { ascending: false })
+      .order("id", { ascending: true });
+    if (!isCurrent()) return;
+    if (error) throw error;
+    const prepared = await Promise.all((posts || []).map(async function (post) {
+      const images = [...(post.community_post_images || [])].sort(function (a, b) {
+        return a.sort_order - b.sort_order || String(a.id).localeCompare(String(b.id));
+      });
+      const existing = memberCommunityCards.get(String(post.id));
+      // 순서만 바뀐 경우에는 사진 주소를 다시 발급하거나 이미지를 다시 만들지 않습니다.
+      if (existing && existing.imagesKey === getCommunityImagesKey(images)) {
+        return { ...post, community_post_images: existing.post.community_post_images };
+      }
+      const oldImages = existing ? existing.post.community_post_images : [];
+      const readyImages = await Promise.all(images.map(async function (image) {
+        const cached = oldImages.find(function (old) {
+          return old.storage_path === image.storage_path && old.signedUrlExpiresAt > Date.now();
+        });
+        if (cached) return { ...image, signedUrl: cached.signedUrl, signedUrlExpiresAt: cached.signedUrlExpiresAt };
+        const { data, error: imageError } = await supabaseClient.storage.from("community-images")
+          .createSignedUrl(image.storage_path, 3600);
+        if (imageError) throw imageError;
+        if (!data || !data.signedUrl) throw new Error("센터 소식 사진 주소를 불러오지 못했습니다.");
+        await preloadCommunityImage(data.signedUrl);
+        return { ...image, signedUrl: data.signedUrl, signedUrlExpiresAt: Date.now() + 3300000 };
+      }));
+      return { ...post, community_post_images: readyImages };
+    }));
+    if (!isCurrent()) return;
+    renderCommunityPosts(prepared);
+  } catch (error) {
+    if (!isCurrent()) return;
+    console.error("센터 소식 불러오기 실패:", error);
+    if (memberCommunityCards.size === 0) {
+      communityStatusMessage.textContent = "센터 소식을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.";
+      communityPostList.replaceChildren(communityStatusMessage);
     }
-
-    const postsWithImages =
-      await Promise.all(
-        (posts || []).map(
-          async function (post) {
-            const sortedImages = [
-              ...(post.community_post_images || [])
-            ].sort(function (first, second) {
-              return (
-                first.sort_order -
-                second.sort_order
-              );
-            });
-
-            const imagesWithUrls =
-              await Promise.all(
-                sortedImages.map(
-                  async function (image) {
-                    const {
-                      data: signedImageData,
-                      error: signedImageError
-                    } =
-                      await supabaseClient.storage
-                        .from("community-images")
-                        .createSignedUrl(
-                          image.storage_path,
-                          3600
-                        );
-
-                    if (signedImageError) {
-                      throw signedImageError;
-                    }
-
-                    return {
-                      ...image,
-                      signedUrl:
-                        signedImageData.signedUrl
-                    };
-                  }
-                )
-              );
-
-            return {
-              ...post,
-              community_post_images:
-                imagesWithUrls
-            };
-          }
-        )
-      );
-
-    renderCommunityPosts(
-      postsWithImages
-    );
-
-  } catch (loadError) {
-    console.error(
-      "센터 소식 불러오기 실패:",
-      loadError
-    );
-
-    communityStatusMessage.textContent =
-      `센터 소식을 불러오지 못했습니다: ${loadError.message ||
-      "알 수 없는 오류"
-      }`;
-
-    communityPostList.replaceChildren(
-      communityStatusMessage
-    );
   }
 }
+
 
 // 운동 기록 캘린더 요소
 const workoutCalendarMonthLabel =
@@ -7995,6 +8052,7 @@ async function loadMemberRoutine(
 
 // 일반 회원 화면 표시
 async function showWorkoutApp(userId) {
+  await stopCommunityRealtimeSubscription();
   loginScreen.hidden = true;
   adminScreen.hidden = true;
   appScreen.hidden = false;
@@ -8034,7 +8092,8 @@ async function showWorkoutApp(userId) {
     ),
     startMemberRoutineRealtimeSubscription(
       userId
-    )
+    ),
+    startCommunityRealtimeSubscription()
   ]);
 
 }
@@ -8501,6 +8560,8 @@ adminMemberSearch.addEventListener("input", function () {
 
 // 관리자 화면 표시
 async function showAdminApp() {
+  await stopCommunityRealtimeSubscription();
+  resetMemberCommunityPosts();
   loginScreen.hidden = true;
   appScreen.hidden = true;
   adminScreen.hidden = false;
@@ -9525,8 +9586,10 @@ async function handleLogout() {
     await Promise.all([
       stopInquiryRealtimeSubscription(),
       stopMemberRoutineRealtimeSubscription(),
-      stopAdminRoutineRequestSubscription()
+      stopAdminRoutineRequestSubscription(),
+      stopCommunityRealtimeSubscription()
     ]);
+    resetMemberCommunityPosts();
 
     // 회원가입 화면이 열려 있었다면 기본 로그인 화면으로 복구
     signupForm.hidden = true;
