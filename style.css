@@ -3678,3 +3678,74 @@ body.camera-open {
 ) + .routine-component-day {
   margin-top: 20px;
 }
+
+/* 관리자 루틴: 선택한 입력 방식만 표시 */
+.admin-routine-format-buttons {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 8px;
+  min-width: 0;
+}
+
+.admin-routine-format-button {
+  box-sizing: border-box;
+  min-width: 0;
+  min-height: 44px;
+  padding: 10px 8px;
+  color: var(--brand-navy);
+  background: #fff;
+  border: 1px solid var(--brand-border);
+  border-radius: 10px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.4;
+  cursor: pointer;
+}
+
+.admin-routine-format-button[aria-pressed="true"] {
+  color: var(--brand-orange);
+  background: #fff5eb;
+  border-color: var(--brand-orange);
+}
+
+.admin-routine-format-button:disabled {
+  cursor: default;
+}
+
+.admin-routine-format-button:disabled[aria-pressed="false"] {
+  color: #8a909b;
+  background: #f5f6f8;
+}
+
+.admin-routine-format-button:focus-visible {
+  outline: 2px solid var(--brand-orange);
+  outline-offset: 2px;
+}
+
+.admin-routine-format-help {
+  margin: 0 0 4px;
+}
+
+.admin-routine-image-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px;
+  min-width: 0;
+}
+
+.admin-routine-image-panel > * {
+  min-width: 0;
+  max-width: 100%;
+}
+
+#adminRoutineEditor > .admin-routine-json-panel {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
+}
+
+#adminSaveMessage:empty {
+  display: none;
+}

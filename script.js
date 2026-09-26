@@ -4120,6 +4120,12 @@ const adminLogoutButton =
 
 let currentAdminRoutine = null;
 let adminRoutineMode = "new";
+let adminRoutineFormat = "json";
+const adminRoutineJsonFormatButton = document.querySelector("#adminRoutineJsonFormatButton");
+const adminRoutineImageFormatButton = document.querySelector("#adminRoutineImageFormatButton");
+const adminRoutineJsonPanel = document.querySelector("#adminRoutineJsonPanel");
+const adminRoutineImagePanel = document.querySelector("#adminRoutineImagePanel");
+const adminRoutineFormatHelp = document.querySelector("#adminRoutineFormatHelp");
 const adminRoutineName = document.querySelector("#adminRoutineName");
 const adminRoutineImage = document.querySelector("#adminRoutineImage");
 const adminRoutinePreview = document.querySelector("#adminRoutinePreview");
@@ -4137,6 +4143,52 @@ const MAX_ROUTINE_IMAGES = 5;
 let adminRoutineImageItems = [];
 let isAdminRoutineSaving = false;
 let isAdminRoutineRequestSelecting = false;
+
+// 저장 방식과 입력창 표시를 한곳에서 맞춥니다.
+function syncAdminRoutineFormatUI() {
+  const isJson = adminRoutineFormat === "json";
+  const editing = adminRoutineMode === "edit" && Boolean(currentAdminRoutine);
+  const blocked = isAdminRoutineSaving || isAdminRoutineRequestSelecting ||
+    saveAdminRoutineButton.disabled || !adminMemberSelect.value ||
+    adminScreen.hidden || adminRoutineEditor.hidden;
+
+  adminRoutineJsonPanel.hidden = !isJson;
+  adminRoutineImagePanel.hidden = isJson;
+  adminRoutineJsonFormatButton.setAttribute("aria-pressed", String(isJson));
+  adminRoutineImageFormatButton.setAttribute("aria-pressed", String(!isJson));
+  adminRoutineJsonFormatButton.disabled = blocked || (editing && !isJson);
+  adminRoutineImageFormatButton.disabled = blocked || (editing && isJson);
+  toggleAdminRoutineModeButton.disabled = blocked;
+  previewAdminRoutineJsonButton.disabled = blocked || !isJson || !window.ExerciseDB;
+
+  adminRoutineFormatHelp.textContent = editing
+    ? "저장된 방식으로 수정합니다. 다른 방식은 ‘새 루틴 배정하기’에서 선택해 주세요."
+    : "입력 방식을 선택해 주세요. 선택한 방식의 내용만 회원에게 적용됩니다.";
+  window.RoutineComponents?.syncAdminApplyButton();
+}
+
+function selectAdminRoutineFormat(format) {
+  if ((format !== "json" && format !== "image") ||
+      format === adminRoutineFormat || adminRoutineMode === "edit" ||
+      isAdminRoutineSaving || isAdminRoutineRequestSelecting ||
+      saveAdminRoutineButton.disabled || !adminMemberSelect.value ||
+      adminScreen.hidden || adminRoutineEditor.hidden) return;
+
+  // 작성 중인 내용은 유지하되, 숨겨지는 영상과 이전 검사 결과는 정리합니다.
+  const jsonDraft = adminRoutineJsonInput.value;
+  window.RoutineComponents?.resetAdminPreview();
+  adminRoutineJsonInput.value = jsonDraft;
+  adminRoutineFormat = format;
+  adminSaveMessage.textContent = "";
+  syncAdminRoutineFormatUI();
+}
+
+adminRoutineJsonFormatButton.addEventListener("click", function () {
+  selectAdminRoutineFormat("json");
+});
+adminRoutineImageFormatButton.addEventListener("click", function () {
+  selectAdminRoutineFormat("image");
+});
 
 // 선택한 이미지의 임시 주소와 편집 목록 정리
 function clearAdminRoutineImageItems() {
@@ -8236,6 +8288,7 @@ function renderAdminRoutineRequests(
           }
   
           isAdminRoutineRequestSelecting = true;
+          syncAdminRoutineFormatUI();
           selectMemberButton.disabled = true;
 
         try {
@@ -8296,6 +8349,7 @@ function renderAdminRoutineRequests(
 
           } finally {
             isAdminRoutineRequestSelecting = false;
+            syncAdminRoutineFormatUI();
             selectMemberButton.disabled = false;
           }
       }
@@ -8719,6 +8773,8 @@ async function resolveRoutineImageItems(routine) {
 
 // 관리자 루틴 입력창 모드 표시
 function renderAdminRoutineEditor() {
+  adminRoutineFormat = adminRoutineMode === "edit" && currentAdminRoutine &&
+    currentAdminRoutine.routine_json == null ? "image" : "json";
   window.RoutineComponents?.resetAdminPreview();
   clearAdminRoutineImageItems();
 
@@ -8766,6 +8822,7 @@ function renderAdminRoutineEditor() {
       "수정 내용 저장";
 
     renderAdminRoutineImageItems();
+    syncAdminRoutineFormatUI();
     return;
   }
 
@@ -8792,13 +8849,16 @@ function renderAdminRoutineEditor() {
 
     toggleAdminRoutineModeButton.hidden = true;
   }
+  syncAdminRoutineFormatUI();
 }
 
 // 최신 루틴 수정과 새 루틴 배정 모드 전환
 toggleAdminRoutineModeButton.addEventListener(
   "click",
   function () {
-    if (!currentAdminRoutine) {
+    if (!currentAdminRoutine || isAdminRoutineSaving ||
+        isAdminRoutineRequestSelecting || saveAdminRoutineButton.disabled ||
+        adminScreen.hidden || adminRoutineEditor.hidden) {
       return;
     }
 
@@ -8835,6 +8895,7 @@ async function loadSelectedAdminMemberRoutine() {
 
   currentAdminRoutine = null;
   adminRoutineMode = "new";
+  adminRoutineFormat = "json";
 
   clearAdminRoutineImageItems();
 
@@ -8845,6 +8906,7 @@ async function loadSelectedAdminMemberRoutine() {
   adminSaveMessage.textContent = "";
   toggleAdminRoutineModeButton.hidden = true;
   saveAdminRoutineButton.disabled = true;
+  syncAdminRoutineFormatUI();
 
   if (!userId) {
     adminRoutineEditor.hidden = true;
@@ -8913,6 +8975,7 @@ async function loadSelectedAdminMemberRoutine() {
 
       saveAdminRoutineButton.disabled =
         isAdminRoutineSaving;
+      syncAdminRoutineFormatUI();
 
       return;
     }
@@ -8939,6 +9002,7 @@ async function loadSelectedAdminMemberRoutine() {
 
     saveAdminRoutineButton.disabled =
       isAdminRoutineSaving;
+    syncAdminRoutineFormatUI();
   } catch (loadError) {
     if (!isCurrentSelection()) {
       return;
@@ -8957,6 +9021,7 @@ async function loadSelectedAdminMemberRoutine() {
       (loadError.message || "");
 
     saveAdminRoutineButton.disabled = true;
+    syncAdminRoutineFormatUI();
   }
 }
 
@@ -9054,7 +9119,8 @@ saveAdminRoutineButton.addEventListener(
 
     if (
       isAdminRoutineSaving ||
-      saveAdminRoutineButton.disabled
+      saveAdminRoutineButton.disabled || adminRoutineFormat !== "image" ||
+      adminScreen.hidden || adminRoutineEditor.hidden
     ) {
       return;
     }
@@ -9138,7 +9204,8 @@ saveAdminRoutineButton.addEventListener(
       refreshAdminAppButton,
       adminRoutineJsonInput,
       previewAdminRoutineJsonButton,
-      applyAdminRoutineJsonButton
+      applyAdminRoutineJsonButton,
+      adminRoutineJsonFormatButton, adminRoutineImageFormatButton
     ].filter(Boolean);
 
     const previousDisabledStates =
@@ -9369,7 +9436,7 @@ saveAdminRoutineButton.addEventListener(
 
       saveAdminRoutineButton.disabled =
         needsReload || !adminMemberSelect.value;
-      window.RoutineComponents?.syncAdminApplyButton();
+      syncAdminRoutineFormatUI();
     }
   }
 );
@@ -9379,7 +9446,8 @@ async function applyValidatedAdminRoutine() {
   if (
     !applyAdminRoutineJsonButton || applyAdminRoutineJsonButton.disabled ||
     isAdminRoutineSaving || isAdminRoutineRequestSelecting ||
-    saveAdminRoutineButton.disabled || adminScreen.hidden
+    saveAdminRoutineButton.disabled || adminScreen.hidden ||
+    adminRoutineEditor.hidden || adminRoutineFormat !== "json"
   ) return;
 
   let routine;
@@ -9410,7 +9478,8 @@ async function applyValidatedAdminRoutine() {
     adminRoutineDescription, toggleAdminRoutineModeButton,
     adminLogoutButton, refreshAdminAppButton,
     adminRoutineJsonInput, previewAdminRoutineJsonButton,
-    applyAdminRoutineJsonButton
+    applyAdminRoutineJsonButton,
+    adminRoutineJsonFormatButton, adminRoutineImageFormatButton
   ].filter(Boolean);
   const previousDisabledStates = lockedControls.map(control => control.disabled);
   let databaseWriteStarted = false;
@@ -9471,7 +9540,7 @@ async function applyValidatedAdminRoutine() {
     });
     renderAdminRoutineImageItems();
     saveAdminRoutineButton.disabled = needsReload || !adminMemberSelect.value;
-    window.RoutineComponents.syncAdminApplyButton();
+    syncAdminRoutineFormatUI();
   }
 }
 
@@ -9626,12 +9695,14 @@ async function handleLogout() {
 
     currentAdminRoutine = null;
     adminRoutineMode = "new";
+    adminRoutineFormat = "json";
 
     adminRoutineModeMessage.textContent = "";
     toggleAdminRoutineModeButton.hidden = true;
 
     adminSaveMessage.textContent = "";
     saveAdminRoutineButton.disabled = false;
+    syncAdminRoutineFormatUI();
 
     // 비밀번호 입력창과 눈 버튼 초기화
     document
@@ -9841,7 +9912,8 @@ window.RoutineComponents?.configureAdminContext?.(function () {
     mode: adminRoutineMode,
     routineId: adminRoutineMode === "edit" ? currentAdminRoutine?.id : null,
     revision: adminRoutineLoadRequestId,
-    ready: !adminScreen.hidden && !adminRoutineEditor.hidden &&
+    ready: adminRoutineFormat === "json" &&
+      !adminScreen.hidden && !adminRoutineEditor.hidden &&
       !isAdminRoutineSaving && !isAdminRoutineRequestSelecting &&
       !saveAdminRoutineButton.disabled
   };

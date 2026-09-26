@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Nanum+Pen+Script&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="style.css?v=42">
+  <link rel="stylesheet" href="style.css?v=43">
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#ec6a1a">
 
@@ -456,33 +456,49 @@
       <label for="adminRoutineName">루틴 이름</label>
       <input id="adminRoutineName" type="text" placeholder="예: 2026년 9월 운동 루틴">
 
-      <label for="adminRoutineImage">
-        루틴 이미지 (최대 5장)
-      </label>
-
-      <input id="adminRoutineImage" type="file" accept="image/png, image/jpeg, image/webp" multiple
-        aria-describedby="adminRoutineImageHelp">
-
-      <p id="adminRoutineImageHelp" class="admin-field-help">
-        이미지는 최대 5장까지 추가할 수 있습니다.
-        이미지마다 캡션을 입력하고 순서를 바꿀 수 있습니다.
+      <div class="admin-routine-format-buttons" role="group" aria-label="루틴 입력 방식">
+        <button id="adminRoutineJsonFormatButton" class="admin-routine-format-button" type="button"
+          aria-pressed="true" aria-controls="adminRoutineJsonPanel" aria-describedby="adminRoutineFormatHelp" disabled>
+          운동 카드(JSON)
+        </button>
+        <button id="adminRoutineImageFormatButton" class="admin-routine-format-button" type="button"
+          aria-pressed="false" aria-controls="adminRoutineImagePanel" aria-describedby="adminRoutineFormatHelp" disabled>
+          기존 이미지
+        </button>
+      </div>
+      <p id="adminRoutineFormatHelp" class="admin-field-help admin-routine-format-help" aria-live="polite">
+        사용할 루틴 입력 방식을 선택해 주세요.
       </p>
 
-      <div id="adminRoutinePreview" class="admin-routine-image-list" hidden></div>
-      <label for="adminRoutineDescription">루틴 설명과 링크</label>
+      <div id="adminRoutineImagePanel" class="admin-routine-image-panel" role="region"
+        aria-labelledby="adminRoutineImageFormatButton" hidden>
+        <label for="adminRoutineImage">
+          루틴 이미지 (최대 5장)
+        </label>
 
-      <textarea id="adminRoutineDescription" rows="9" placeholder="회원에게 보여줄 설명을 입력하세요.
-      
-      링크는 https://... 형식으로 붙여넣으면 자동으로 클릭할 수 있습니다."></textarea>
-      <button id="saveAdminRoutineButton" type="button">
-        회원 루틴 저장
-      </button>
+        <input id="adminRoutineImage" type="file" accept="image/png, image/jpeg, image/webp" multiple
+          aria-describedby="adminRoutineImageHelp">
 
-      <p id="adminSaveMessage" class="admin-message"></p>
+        <p id="adminRoutineImageHelp" class="admin-field-help">
+          이미지는 최대 5장까지 추가할 수 있습니다.
+          이미지마다 캡션을 입력하고 순서를 바꿀 수 있습니다.
+        </p>
+
+        <div id="adminRoutinePreview" class="admin-routine-image-list" hidden></div>
+        <label for="adminRoutineDescription">루틴 설명과 링크</label>
+
+        <textarea id="adminRoutineDescription" rows="9" placeholder="회원에게 보여줄 설명을 입력하세요.
+        
+        링크는 https://... 형식으로 붙여넣으면 자동으로 클릭할 수 있습니다."></textarea>
+        <button id="saveAdminRoutineButton" type="button">
+          회원 루틴 저장
+        </button>
+      </div>
 
       <!-- 운동 구성 JSON 불러오기 -->
-      <div id="adminRoutineJsonPanel" class="admin-routine-json-panel">
-        <h3>AI 루틴 불러오기</h3>
+      <div id="adminRoutineJsonPanel" class="admin-routine-json-panel" role="region"
+        aria-labelledby="adminRoutineJsonFormatButton">
+        <h3>운동 카드 불러오기</h3>
 
         <p class="admin-field-help">
           루틴 JSON을 붙여넣고 미리보기를 확인해 주세요.
@@ -509,6 +525,7 @@
         </button>
 
       </div>
+      <p id="adminSaveMessage" class="admin-message" aria-live="polite"></p>
     </section>
 
     <!-- 센터 커뮤니티 소식 작성 -->
@@ -663,9 +680,9 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-  <script src="exercise-data.js?v=42"></script>
-  <script src="routine-components.js?v=42"></script>
-  <script src="script.js?v=42"></script>
+  <script src="exercise-data.js?v=43"></script>
+  <script src="routine-components.js?v=43"></script>
+  <script src="script.js?v=43"></script>
 </body>
 
 
