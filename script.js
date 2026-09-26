@@ -4069,6 +4069,10 @@ const adminRoutinePreview = document.querySelector("#adminRoutinePreview");
 const adminRoutineDescription = document.querySelector("#adminRoutineDescription");
 const saveAdminRoutineButton = document.querySelector("#saveAdminRoutineButton");
 const adminSaveMessage = document.querySelector("#adminSaveMessage");
+const adminRoutineJsonInput = document.querySelector("#adminRoutineJsonInput");
+const previewAdminRoutineJsonButton = document.querySelector("#previewAdminRoutineJsonButton");
+const applyAdminRoutineJsonButton = document.querySelector("#applyAdminRoutineJsonButton");
+const adminRoutineJsonMessage = document.querySelector("#adminRoutineJsonMessage");
 
 // 관리자 루틴 이미지 편집 상태
 const MAX_ROUTINE_IMAGES = 5;
@@ -7357,6 +7361,50 @@ let memberRoutineLoadRequestId = 0;
 let memberRoutineDisplayedUserId = null;
 let memberRoutineDisplayedId = null;
 
+// 기존 이미지 영역 아래에 운동 카드 영역을 한 번만 만듭니다.
+const memberRoutineComponents = document.createElement("section");
+memberRoutineComponents.id = "memberRoutineComponents";
+memberRoutineComponents.className = "member-routine-components";
+memberRoutineComponents.setAttribute("aria-label", "배정된 운동 구성");
+memberRoutineComponents.hidden = true;
+routineCarousel.insertAdjacentElement("afterend", memberRoutineComponents);
+let memberRoutineComponentsKey = null;
+
+function resetMemberRoutineComponents() {
+  memberRoutineComponents.replaceChildren();
+  memberRoutineComponents.hidden = true;
+  memberRoutineComponentsKey = null;
+}
+
+function prepareMemberRoutineComponents(data, userId) {
+  if (data.routine_json == null) return { key: null, node: null };
+  if (!window.RoutineComponents) {
+    throw new Error("운동 카드 파일을 불러오지 못했습니다. 앱을 새로고침해 주세요.");
+  }
+  const routine = window.RoutineComponents.parseRoutineJson(
+    JSON.stringify(data.routine_json)
+  );
+  const key = JSON.stringify([userId, String(data.id), routine]);
+  return {
+    key,
+    node: key === memberRoutineComponentsKey
+      ? null : window.RoutineComponents.renderRoutine(routine)
+  };
+}
+
+function showMemberRoutineComponents(prepared) {
+  if (prepared.key === null) {
+    if (memberRoutineComponentsKey !== null) resetMemberRoutineComponents();
+    return;
+  }
+  // 내용이 같으면 펼친 상세설명과 영상, 기존 DOM을 유지합니다.
+  if (prepared.key !== memberRoutineComponentsKey) {
+    memberRoutineComponents.replaceChildren(prepared.node);
+    memberRoutineComponentsKey = prepared.key;
+  }
+  memberRoutineComponents.hidden = false;
+}
+
 function getRoutineImageKey(item) {
   return item.image_path
     ? `path:${item.image_path}`
@@ -7778,6 +7826,7 @@ async function loadMemberRoutine(
 
   if (!keepCurrent) {
     resetMemberRoutineCarousel();
+    resetMemberRoutineComponents();
 
     routineDescription.replaceChildren();
     routineDescription.hidden = true;
@@ -7801,6 +7850,7 @@ async function loadMemberRoutine(
           routine_image_path,
           routine_images,
           routine_description,
+          routine_json,
           assigned_at
         `
       )
@@ -7822,6 +7872,7 @@ async function loadMemberRoutine(
 
     if (!data) {
       resetMemberRoutineCarousel();
+      resetMemberRoutineComponents();
 
       renderRoutineDescription("");
 
@@ -7835,6 +7886,7 @@ async function loadMemberRoutine(
       return;
     }
 
+    const preparedComponents = prepareMemberRoutineComponents(data, userId);
     const entries = getRoutineImageEntries(data);
     const previous = memberRoutineCarouselState;
 
@@ -7888,6 +7940,7 @@ async function loadMemberRoutine(
       data.routine_name,
       sameRoutine
     );
+    showMemberRoutineComponents(preparedComponents);
 
     assignedRoutineName.textContent =
       data.routine_name;
@@ -8593,6 +8646,7 @@ async function resolveRoutineImageItems(routine) {
 
 // 관리자 루틴 입력창 모드 표시
 function renderAdminRoutineEditor() {
+  window.RoutineComponents?.resetAdminPreview();
   clearAdminRoutineImageItems();
 
   adminRoutineImage.value = "";
@@ -8607,6 +8661,12 @@ function renderAdminRoutineEditor() {
 
     adminRoutineDescription.value =
       currentAdminRoutine.routine_description || "";
+
+    if (adminRoutineJsonInput && currentAdminRoutine.routine_json != null) {
+      adminRoutineJsonInput.value = JSON.stringify(currentAdminRoutine.routine_json, null, 2);
+      adminRoutineJsonMessage.textContent =
+        "저장된 운동 구성입니다. 수정 후 JSON 검사 및 미리보기를 눌러 주세요.";
+    }
 
     adminRoutineImageItems =
       (currentAdminRoutine.imageItems || []).map(
@@ -8684,6 +8744,7 @@ let adminRoutineLoadRequestId = 0;
 // 관리자 화면에서 회원을 선택했을 때
 async function loadSelectedAdminMemberRoutine() {
   const requestId = ++adminRoutineLoadRequestId;
+  window.RoutineComponents?.resetAdminPreview();
   const userId = adminMemberSelect.value;
 
   const selectedOption =
@@ -8753,7 +8814,7 @@ async function loadSelectedAdminMemberRoutine() {
       .select(
         "id, routine_name, routine_image_path, " +
         "routine_image_url, routine_images, " +
-        "routine_description, assigned_at"
+        "routine_description, routine_json, assigned_at"
       )
       .eq("user_id", userId)
       .eq("is_active", true)
@@ -9001,8 +9062,11 @@ saveAdminRoutineButton.addEventListener(
       adminRoutineDescription,
       toggleAdminRoutineModeButton,
       adminLogoutButton,
-      refreshAdminAppButton
-    ];
+      refreshAdminAppButton,
+      adminRoutineJsonInput,
+      previewAdminRoutineJsonButton,
+      applyAdminRoutineJsonButton
+    ].filter(Boolean);
 
     const previousDisabledStates =
       lockedControls.map(function (control) {
@@ -9232,9 +9296,113 @@ saveAdminRoutineButton.addEventListener(
 
       saveAdminRoutineButton.disabled =
         needsReload || !adminMemberSelect.value;
+      window.RoutineComponents?.syncAdminApplyButton();
     }
   }
 );
+
+// 검사한 운동 구성을 현재 선택한 회원에게 저장
+async function applyValidatedAdminRoutine() {
+  if (
+    !applyAdminRoutineJsonButton || applyAdminRoutineJsonButton.disabled ||
+    isAdminRoutineSaving || isAdminRoutineRequestSelecting ||
+    saveAdminRoutineButton.disabled || adminScreen.hidden
+  ) return;
+
+  let routine;
+  try {
+    routine = window.RoutineComponents.getValidatedAdminRoutine();
+  } catch (error) {
+    adminRoutineJsonMessage.textContent = error.message;
+    return;
+  }
+
+  const userId = adminMemberSelect.value;
+  const routineName = adminRoutineName.value.trim();
+  const isEditMode = adminRoutineMode === "edit" && Boolean(currentAdminRoutine);
+  const routineId = isEditMode ? currentAdminRoutine.id : null;
+  if (!userId) return;
+  if (!routineName) {
+    adminRoutineJsonMessage.textContent = "위쪽의 루틴 이름을 입력해 주세요.";
+    adminRoutineName.focus({ preventScroll: true });
+    return;
+  }
+  const selectedOption = adminMemberSelect.options[adminMemberSelect.selectedIndex];
+  const memberName = selectedOption?.dataset.memberName || "선택한 회원";
+  const action = isEditMode ? "현재 루틴에 운동 카드를 적용" : "새 운동 카드 루틴을 배정";
+  if (!window.confirm(`${memberName}님에게 '${routineName}' 이름으로 ${action}할까요?`)) return;
+
+  const lockedControls = [
+    adminMemberSelect, adminMemberSearch, adminRoutineName,
+    adminRoutineDescription, toggleAdminRoutineModeButton,
+    adminLogoutButton, refreshAdminAppButton,
+    adminRoutineJsonInput, previewAdminRoutineJsonButton,
+    applyAdminRoutineJsonButton
+  ].filter(Boolean);
+  const previousDisabledStates = lockedControls.map(control => control.disabled);
+  let databaseWriteStarted = false;
+  let databaseSaved = false;
+  let needsReload = false;
+  isAdminRoutineSaving = true;
+  saveAdminRoutineButton.disabled = true;
+  lockedControls.forEach(control => { control.disabled = true; });
+  renderAdminRoutineImageItems();
+  adminSaveMessage.textContent = "";
+  adminRoutineJsonMessage.textContent = "운동 구성을 저장하고 있습니다…";
+
+  try {
+    // 기존 루틴에 적용할 때 이미지와 별도 설명은 수정하지 않습니다.
+    const values = { routine_name: routineName, routine_json: routine };
+    databaseWriteStarted = true;
+    const query = isEditMode
+      ? supabaseClient.from("member_routines").update(values)
+          .eq("id", routineId).eq("user_id", userId)
+      : supabaseClient.from("member_routines").insert({
+          ...values, user_id: userId, is_active: true,
+          routine_images: [], routine_image_url: "",
+          routine_image_path: null, routine_description: ""
+        });
+    const { data: savedRoutine, error } = await query.select("id").single();
+    if (error) throw error;
+    if (!savedRoutine) throw new Error("저장 결과를 확인하지 못했습니다.");
+    databaseSaved = true;
+
+    if (adminScreen.hidden) return;
+    adminMemberSearch.value = "";
+    await loadAdminMembers();
+    if (adminScreen.hidden) return;
+    adminMemberSelect.value = userId;
+    if (adminMemberSelect.value !== userId) throw new Error("회원 목록을 다시 불러오지 못했습니다.");
+    await loadSelectedAdminMemberRoutine();
+    if (adminScreen.hidden) return;
+    if (!currentAdminRoutine || String(currentAdminRoutine.id) !== String(savedRoutine.id)) {
+      throw new Error("저장된 루틴을 다시 확인하지 못했습니다.");
+    }
+    adminRoutineJsonMessage.textContent = isEditMode
+      ? "운동 카드를 적용했습니다. 기존 이미지와 설명은 유지됩니다."
+      : "새 운동 카드 루틴을 배정했습니다.";
+  } catch (error) {
+    console.error("운동 카드 루틴 저장 실패:", error);
+    needsReload = databaseWriteStarted;
+    if (!adminScreen.hidden) {
+      adminRoutineJsonMessage.textContent = databaseSaved
+        ? "저장은 완료됐지만 화면을 갱신하지 못했습니다. 회원을 다시 선택해 확인해 주세요."
+        : databaseWriteStarted
+          ? "저장 완료를 확인하지 못했습니다. 중복 배정을 피하려면 회원을 다시 선택해 확인해 주세요. " + (error.message || "")
+          : "저장하지 못했습니다. " + (error.message || "");
+    }
+  } finally {
+    isAdminRoutineSaving = false;
+    lockedControls.forEach((control, index) => {
+      control.disabled = previousDisabledStates[index];
+    });
+    renderAdminRoutineImageItems();
+    saveAdminRoutineButton.disabled = needsReload || !adminMemberSelect.value;
+    window.RoutineComponents.syncAdminApplyButton();
+  }
+}
+
+applyAdminRoutineJsonButton?.addEventListener("click", applyValidatedAdminRoutine);
 
 // 로그인 버튼 기능
 loginForm.addEventListener("submit", async function (event) {
@@ -9335,6 +9503,7 @@ async function handleLogout() {
 
     // 회원 루틴 이미지와 설명 초기화
     resetMemberRoutineCarousel();
+    resetMemberRoutineComponents();
 
     assignedRoutineName.textContent = "불러오는 중...";
 
@@ -9590,4 +9759,17 @@ document.querySelectorAll("[data-password-toggle]").forEach((button) => {
     );
   });
 });
+// 검사 결과를 회원·수정 모드·최신 조회 상태에 연결합니다.
+window.RoutineComponents?.configureAdminContext?.(function () {
+  return {
+    userId: adminMemberSelect.value,
+    mode: adminRoutineMode,
+    routineId: adminRoutineMode === "edit" ? currentAdminRoutine?.id : null,
+    revision: adminRoutineLoadRequestId,
+    ready: !adminScreen.hidden && !adminRoutineEditor.hidden &&
+      !isAdminRoutineSaving && !isAdminRoutineRequestSelecting &&
+      !saveAdminRoutineButton.disabled
+  };
+});
+
 initializeLogin();

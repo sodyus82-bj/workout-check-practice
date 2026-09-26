@@ -375,8 +375,58 @@
   const button = document.querySelector("#previewAdminRoutineJsonButton");
   const message = document.querySelector("#adminRoutineJsonMessage");
   const preview = document.querySelector("#adminRoutineJsonPreview");
+  const applyButton = document.querySelector("#applyAdminRoutineJsonButton");
+  let adminContextProvider = null;
+  let validatedText = null;
+  let validatedContext = null;
+
+  function getAdminContextKey() {
+    if (!adminContextProvider) return null;
+    const context = adminContextProvider();
+    if (!context || !context.ready || !context.userId) return null;
+    return JSON.stringify([
+      context.userId,
+      context.mode,
+      context.routineId == null ? null : String(context.routineId),
+      context.revision
+    ]);
+  }
+
+  function syncAdminApplyButton() {
+    if (!applyButton) return;
+    const contextKey = getAdminContextKey();
+    applyButton.disabled = !(
+      validatedText !== null &&
+      input && input.value === validatedText &&
+      contextKey !== null && contextKey === validatedContext
+    );
+  }
+
+  // 기존 script.js가 저장 이벤트와 회원 선택 상태를 연결한 뒤 사용합니다.
+  function configureAdminContext(provider) {
+    if (typeof provider !== "function") {
+      throw new Error("관리자 루틴 저장 연결을 확인해 주세요.");
+    }
+    adminContextProvider = provider;
+    clearPreview();
+  }
+
+  function getValidatedAdminRoutine() {
+    syncAdminApplyButton();
+    if (
+      validatedText === null || !input || input.value !== validatedText ||
+      validatedContext === null || getAdminContextKey() !== validatedContext
+    ) {
+      throw new Error("현재 회원과 루틴 내용을 확인한 뒤 JSON 검사 및 미리보기를 다시 눌러 주세요.");
+    }
+    // 저장할 때 다시 검사하고 새 객체를 반환해 미리보기 내용의 변형을 막습니다.
+    return parseRoutineJson(validatedText);
+  }
 
   function clearPreview() {
+    validatedText = null;
+    validatedContext = null;
+    if (applyButton) applyButton.disabled = true;
     if (preview) {
       Array.from(openMedia).forEach(function (media) {
         if (preview.contains(media.area)) media.close();
@@ -394,7 +444,10 @@
   }
 
   // 저장 단계에서도 같은 검사 함수를 재사용합니다.
-  window.RoutineComponents = Object.freeze({ parseRoutineJson, resetAdminPreview, renderRoutine, stopAllVideos });
+  window.RoutineComponents = Object.freeze({
+    parseRoutineJson, resetAdminPreview, renderRoutine, stopAllVideos,
+    configureAdminContext, syncAdminApplyButton, getValidatedAdminRoutine
+  });
 
   if (!input || !button || !message || !preview) return;
   message.style.whiteSpace = "pre-line";
@@ -423,6 +476,9 @@
       const routine = parseRoutineJson(input.value);
       preview.replaceChildren(renderRoutine(routine));
       preview.hidden = false;
+      validatedText = input.value;
+      validatedContext = getAdminContextKey();
+      syncAdminApplyButton();
       const total = routine.days.reduce(function (sum, day) { return sum + day.exercises.length; }, 0);
       message.textContent = "검사 완료 · " + routine.days.length + "개 운동일, 총 " + total + "개 운동입니다. 아직 회원에게 저장되지 않았습니다.";
     } catch (error) {
